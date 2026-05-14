@@ -177,14 +177,19 @@ public:
     uint8_t writeHoldingReg(uint16_t reg, uint16_t value);
 
     /**
-     * @brief 向 COMMIT 寄存器写入 @ref DFROBOT_IGS_COMMIT_KEY_SAVE_CONFIG，将波特率/校验/从站地址写入传感器 NVM
+     * @brief Write commit magic to holding reg 0x0007 to save baud / parity / slave address to sensor EEPROM
      */
     uint8_t commitConfiguration(void);
 
+    /**
+     * @brief 将传感器 Modbus 从站地址改为 `newAddr`（1～247），并写入 EEPROM 保持
+     * @n 顺序：写保持寄存器 0x0006 → 本机 `setSlaveAddr`（固件会立即用新地址应答）→ `commitConfiguration` 落盘
+     * @return 0 成功；非 0 为 DFRobot_RTU 写失败码；`newAddr` 非法时返回 3（非法数据）
+     */
+    uint8_t setDeviceAddress(uint8_t newAddr);
+
 private:
     uint8_t _slave;
-    static void unpackChars(const uint16_t *table, uint8_t startIndex, uint8_t regCount, char *out,
-                            size_t outBytes);
     void parseInputTable(const uint16_t *table, uint16_t regCount);
     void applyGasStringsFromCode(void);
     void applyTimestampFromRegs(const uint16_t *t);

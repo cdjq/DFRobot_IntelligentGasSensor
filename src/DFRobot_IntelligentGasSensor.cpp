@@ -211,6 +211,22 @@ uint8_t DFRobot_IntelligentGasSensor::commitConfiguration(void) {
     return writeHoldingRegister(_slave, DFROBOT_IGS_HOLD_REG_COMMIT, DFROBOT_IGS_COMMIT_KEY_SAVE_CONFIG);
 }
 
+uint8_t DFRobot_IntelligentGasSensor::setDeviceAddress(uint8_t newAddr) {
+    if (newAddr < DFROBOT_IGS_SLAVE_ADDR_MIN || newAddr > DFROBOT_IGS_SLAVE_ADDR_MAX)
+        return 3;
+    if (newAddr == _slave)
+        return 0;
+    uint8_t e = writeHoldingReg(DFROBOT_IGS_HOLD_REG_SLAVE_ADDR, newAddr);
+    if (e != 0)
+        return e;
+    /* 固件在写 0x0006 后立即用新从站号应答，主机必须先切到新地址再发 COMMIT */
+    setSlaveAddr(newAddr);
+    e = commitConfiguration();
+    if (e != 0)
+        return e;
+    return 0;
+}
+
 uint8_t DFRobot_IntelligentGasSensor::readMeasurementWithTimestamp(void) {
     return readMeasurement(true);
 }
