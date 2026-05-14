@@ -21,6 +21,8 @@ readMeasurementWithTimestamp	KEYWORD2
 readHoldingShadow	KEYWORD2
 writeHoldingReg	KEYWORD2
 commitConfiguration	KEYWORD2
+setUartAutoReport	KEYWORD2
+parseUnsolicitedInputReadResponse	KEYWORD2
 setDeviceAddress	KEYWORD2
 getConcentrationFloat	KEYWORD2
 checkVid	KEYWORD2

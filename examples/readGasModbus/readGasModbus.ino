@@ -6,6 +6,9 @@
 
 static const unsigned long kModbusBaud = 9600;
 
+/** 与传感器 Modbus 从站号一致（保持寄存器 0x0006）。若串口助手仅「05 …」有应答，改为 5。 */
+static const uint8_t kModbusSlave = 1;
+
 #if defined(ARDUINO_ARCH_ESP32)
 #define MODBUS_SERIAL Serial2
 #define MODBUS_RX 16
@@ -13,13 +16,13 @@ static const unsigned long kModbusBaud = 9600;
 #define RS485_DE_PIN 4
 #define USE_RS485 0
 #if USE_RS485
-DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, RS485_DE_PIN, 1);
+DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, RS485_DE_PIN, kModbusSlave);
 #else
-DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, 1);
+DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, kModbusSlave);
 #endif
 #else
 #define MODBUS_SERIAL Serial1
-DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, 1);
+DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, kModbusSlave);
 #endif
 
 void setup() {

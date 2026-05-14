@@ -5,8 +5,8 @@
  * @details
  * 寄存器与传感器固件 `RtuRegisterMap.h` 一致：总线仅 **GAS_CODE**；类型/单位由本库译码。
  * 时间戳为 **6 个输入寄存器**（年月日时分秒）；`lastMeasure.timestamp` 由库拼接便于打印。
+ * **SEN0742**：保持寄存器 `0x0001` 可开启 UART **主动上报**（见 `setUartAutoReport`）。
  * 默认 `readMeasurement()` 不读时间戳区；需要时 `readMeasurementWithTimestamp()`。
- *
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
  * @license     The MIT License (MIT)
  * @version     V1.0
@@ -63,6 +63,7 @@
 #define DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP DFROBOT_IGS_IN_REG_TS_YEAR
 
 /* 保持寄存器（FC 0x03 / 0x06 / 0x10） */
+#define DFROBOT_IGS_HOLD_REG_UART_AUTO_REPORT 0x0001u
 #define DFROBOT_IGS_HOLD_REG_BAUD_CODE    0x0003u
 #define DFROBOT_IGS_HOLD_REG_PARITY_STOP  0x0004u
 #define DFROBOT_IGS_HOLD_REG_SLAVE_ADDR   0x0006u
@@ -180,6 +181,20 @@ public:
      * @brief Write commit magic to holding reg 0x0007 to save baud / parity / slave address to sensor EEPROM
      */
     uint8_t commitConfiguration(void);
+
+    /**
+     * @brief SEN0742：写保持寄存器 `0x0001` 开关 UART 主动上报（0=关，1=开）；仅影子，掉电丢失。
+     * @param commitToEeprom true 时再写 `0x0007`=COMMIT 键落盘（与波特率等一并保存）
+     */
+    uint8_t setUartAutoReport(bool enable, bool commitToEeprom = false);
+
+    /**
+     * @brief 解析 SEN0742 **主动上报**的一帧 RTU（格式同 FC 0x04 读 12 个输入寄存器的应答）
+     * @param adu 含 CRC；总长应为 **29**（1+1+1+24+2）
+     * @param len 字节数，须为 29
+     * @return 0 成功并填充 @ref lastMeasure；8 CRC 错；11 从站号不符；3 功能码/字节数等非法
+     */
+    uint8_t parseUnsolicitedInputReadResponse(const uint8_t *adu, size_t len);
 
     /**
      * @brief 将传感器 Modbus 从站地址改为 `newAddr`（1～247），并写入 EEPROM 保持

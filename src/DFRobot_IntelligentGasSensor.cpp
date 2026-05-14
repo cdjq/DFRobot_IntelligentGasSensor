@@ -8,6 +8,27 @@
 
 namespace {
 
+constexpr size_t kUnsolicitedFc04Len =
+    (size_t)1 + 1 + 1 + (size_t)DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP * 2 + 2;
+
+uint16_t modbusCrc16(const uint8_t *data, size_t len) {
+    uint16_t crc = 0xFFFFu;
+    for (size_t i = 0; i < len; ++i) {
+        crc ^= data[i];
+        for (uint8_t b = 0; b < 8u; ++b)
+            crc = (crc & 1u) ? (uint16_t)((crc >> 1) ^ 0xA001u) : (uint16_t)(crc >> 1);
+    }
+    return crc;
+}
+
+bool modbusCrcOk(const uint8_t *adu, size_t len) {
+    if (len < 4)
+        return false;
+    const uint16_t got  = (uint16_t)((uint16_t)adu[len - 1] << 8) | adu[len - 2];
+    const uint16_t calc = modbusCrc16(adu, len - 2);
+    return got == calc;
+}
+
 struct GasCodeRow {
     uint8_t     code;
     const char *type;
@@ -209,6 +230,35 @@ uint8_t DFRobot_IntelligentGasSensor::writeHoldingReg(uint16_t reg, uint16_t val
 
 uint8_t DFRobot_IntelligentGasSensor::commitConfiguration(void) {
     return writeHoldingRegister(_slave, DFROBOT_IGS_HOLD_REG_COMMIT, DFROBOT_IGS_COMMIT_KEY_SAVE_CONFIG);
+}
+
+uint8_t DFRobot_IntelligentGasSensor::setUartAutoReport(bool enable, bool commitToEeprom) {
+    uint8_t e = writeHoldingReg(DFROBOT_IGS_HOLD_REG_UART_AUTO_REPORT, enable ? 1u : 0u);
+    if (e != 0)
+        return e;
+    if (!commitToEeprom)
+        return 0;
+    return commitConfiguration();
+}
+
+uint8_t DFRobot_IntelligentGasSensor::parseUnsolicitedInputReadResponse(const uint8_t *adu, size_t len) {
+    if (adu == nullptr || len != kUnsolicitedFc04Len)
+        return 3;
+    if (adu[0] != _slave)
+        return 11;
+    if (adu[1] != 0x04)
+        return 3;
+    if (adu[2] != (uint8_t)(DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP * 2u))
+        return 3;
+    if (!modbusCrcOk(adu, len))
+        return 8;
+
+    uint16_t table[DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP];
+    for (unsigned i = 0; i < DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP; i++) {
+        table[i] = (uint16_t)((uint16_t)adu[3u + i * 2u] << 8) | adu[3u + i * 2u + 1u];
+    }
+    parseInputTable(table, DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP);
+    return 0;
 }
 
 uint8_t DFRobot_IntelligentGasSensor::setDeviceAddress(uint8_t newAddr) {
