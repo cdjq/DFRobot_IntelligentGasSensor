@@ -1,0 +1,193 @@
+/*!
+ * @file DFRobot_IntelligentGasSensor.h
+ * @brief Host-side Modbus RTU driver for DFRobot intelligent gas sensors (SEN07xx Modbus 固件).
+ *
+ * @details
+ * 寄存器与传感器固件 `RtuRegisterMap.h` 一致：总线仅 **GAS_CODE**；类型/单位由本库译码。
+ * 时间戳为 **6 个输入寄存器**（年月日时分秒）；`lastMeasure.timestamp` 由库拼接便于打印。
+ * 默认 `readMeasurement()` 不读时间戳区；需要时 `readMeasurementWithTimestamp()`。
+ *
+ * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @license     The MIT License (MIT)
+ * @version     V1.0
+ * @date        2026-05-14
+ */
+#ifndef __DFRobot_IntelligentGasSensor_H__
+#define __DFRobot_IntelligentGasSensor_H__
+
+#include "Arduino.h"
+#include "DFRobot_RTU.h"
+#include <math.h>
+#include <stdint.h>
+#include <string.h>
+
+/** DFRobot VID（输入寄存器 0x0001） */
+#define DFROBOT_IGS_VID_DFRobot ((uint16_t)0x3343)
+/** TTL UART 产品 PID（输入寄存器 0x0000） */
+#define DFROBOT_IGS_PID_SEN0742 ((uint16_t)0xC742)
+/** RS-485 产品 PID */
+#define DFROBOT_IGS_PID_SEN0746 ((uint16_t)0xC746)
+
+#define DFROBOT_IGS_REGMAP_VERSION ((uint16_t)0x0100)
+
+#define DFROBOT_IGS_BOARD_UNKNOWN ((uint16_t)0)
+#define DFROBOT_IGS_BOARD_UART    ((uint16_t)1)
+#define DFROBOT_IGS_BOARD_RS485   ((uint16_t)2)
+
+#define DFROBOT_IGS_STATUS_VALID_MSK ((uint16_t)(1u << 0))
+
+#define DFROBOT_IGS_SLAVE_ADDR_MIN 1u
+#define DFROBOT_IGS_SLAVE_ADDR_MAX 247u
+
+#define DFROBOT_IGS_COMMIT_KEY_SAVE_CONFIG ((uint16_t)0xA501)
+
+/* 输入寄存器地址（0 基，FC 0x04） */
+#define DFROBOT_IGS_IN_REG_PID          0x0000u
+#define DFROBOT_IGS_IN_REG_VID          0x0001u
+#define DFROBOT_IGS_IN_REG_MODBUS_ADDR  0x0002u
+#define DFROBOT_IGS_IN_REG_VERSION      0x0005u
+#define DFROBOT_IGS_IN_REG_BOARD_TYPE   0x0006u
+#define DFROBOT_IGS_IN_REG_STATUS       0x0007u
+#define DFROBOT_IGS_IN_REG_GAS_CODE     0x0008u
+#define DFROBOT_IGS_IN_REG_CONC_LO      0x0009u
+#define DFROBOT_IGS_IN_REG_CONC_HI      0x000Au
+#define DFROBOT_IGS_IN_REG_DECIMAL_PT    0x000Bu
+#define DFROBOT_IGS_IN_REG_TS_YEAR       0x000Cu
+#define DFROBOT_IGS_IN_REG_TS_MONTH      0x000Du
+#define DFROBOT_IGS_IN_REG_TS_DAY        0x000Eu
+#define DFROBOT_IGS_IN_REG_TS_HOUR       0x000Fu
+#define DFROBOT_IGS_IN_REG_TS_MINUTE     0x0010u
+#define DFROBOT_IGS_IN_REG_TS_SECOND     0x0011u
+#define DFROBOT_IGS_IN_REG_LAST          DFROBOT_IGS_IN_REG_TS_SECOND
+#define DFROBOT_IGS_INPUT_REG_COUNT      (DFROBOT_IGS_IN_REG_LAST + 1u)
+#define DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP DFROBOT_IGS_IN_REG_TS_YEAR
+
+/* 保持寄存器（FC 0x03 / 0x06 / 0x10） */
+#define DFROBOT_IGS_HOLD_REG_BAUD_CODE    0x0003u
+#define DFROBOT_IGS_HOLD_REG_PARITY_STOP  0x0004u
+#define DFROBOT_IGS_HOLD_REG_SLAVE_ADDR   0x0006u
+#define DFROBOT_IGS_HOLD_REG_COMMIT       0x0007u
+#define DFROBOT_IGS_HOLDING_REG_COUNT     0x0008u
+
+#define DFROBOT_IGS_BAUD_CODE_2400   ((uint16_t)1)
+#define DFROBOT_IGS_BAUD_CODE_4800   ((uint16_t)2)
+#define DFROBOT_IGS_BAUD_CODE_9600   ((uint16_t)3)
+#define DFROBOT_IGS_BAUD_CODE_14400  ((uint16_t)4)
+#define DFROBOT_IGS_BAUD_CODE_19200  ((uint16_t)5)
+#define DFROBOT_IGS_BAUD_CODE_38400  ((uint16_t)6)
+#define DFROBOT_IGS_BAUD_CODE_57600  ((uint16_t)7)
+#define DFROBOT_IGS_BAUD_CODE_115200 ((uint16_t)8)
+
+#define DFROBOT_IGS_PARITY_NONE  ((uint16_t)0u)
+#define DFROBOT_IGS_PARITY_ODD   ((uint16_t)1u)
+#define DFROBOT_IGS_PARITY_EVEN  ((uint16_t)2u)
+#define DFROBOT_IGS_STOPBIT_1    ((uint16_t)0u)
+#define DFROBOT_IGS_STOPBIT_2    ((uint16_t)(1u << 2))
+
+/**
+ * @brief 一次输入寄存器表解析后的测量与标识（在 @ref readMeasurement 成功后有效）
+ */
+typedef struct {
+    uint16_t pid;
+    uint16_t vid;
+    uint8_t  modbusAddr;
+    uint16_t registerMapVersion;
+    uint16_t boardType;
+    uint16_t status;
+    uint8_t  gasCode; /**< Raw SMX100 gas code from input reg @ref DFROBOT_IGS_IN_REG_GAS_CODE (low 8 bits) */
+    uint32_t concentrationRaw;
+    uint8_t  decimalPoint;
+    char     gasType[13]; /**< **Decoded locally** from @ref gasCode (not read from Modbus as text); unknown → `0xNN` */
+    char     unit[9]; /**< **Decoded locally** from @ref gasCode; unknown code → `"?"` */
+    uint16_t tsYear; /**< 仅读满含时间戳寄存器后有效；无时间时为 0 */
+    uint8_t  tsMonth, tsDay, tsHour, tsMinute, tsSecond;
+    char     timestamp[21]; /**< 由年月日时分秒拼接；无有效时间时为 "" */
+    bool     dataValid;
+} DFRobot_IntelligentGasSensorMeasure_t;
+
+class DFRobot_IntelligentGasSensor : public DFRobot_RTU {
+public:
+    /**
+     * @brief RS-485：传入串口与 DE 引脚（高有效发送等，与 DFRobot_RTU 一致）
+     */
+    DFRobot_IntelligentGasSensor(Stream *s, int dePin, uint8_t slaveAddr = 1);
+    /**
+     * @brief TTL UART：无 DE 控制
+     */
+    DFRobot_IntelligentGasSensor(Stream *s, uint8_t slaveAddr = 1);
+
+    void setSlaveAddr(uint8_t addr);
+    uint8_t getSlaveAddr(void) const { return _slave; }
+
+    /**
+     * @brief 读取输入寄存器并填充 @ref lastMeasure（默认不读时间戳区，与常见无 RTC 传感器一致）
+     * @param withTimestamp false（默认）：读到小数位（12 个寄存器）；true：再读 6 个时间寄存器（共 18 个）
+     * @return 0 成功，非 0 为 DFRobot_RTU 异常码
+     */
+    uint8_t readMeasurement(bool withTimestamp = false);
+
+    /**
+     * @brief 读满输入寄存器表并解析时间戳（带 RTC 的固件可选用）
+     */
+    uint8_t readMeasurementWithTimestamp(void);
+
+    /**
+     * @brief 仅读前 6 个输入寄存器（PID/VID/地址/版本），用于快速探测
+     */
+    uint8_t readIdentification(uint16_t *pid, uint16_t *vid, uint16_t *version);
+
+    /**
+     * @brief 读 VID 是否为 DFRobot 规范值
+     */
+    bool checkVid(void);
+
+    /**
+     * @brief 浓度浮点值 = concentrationRaw × 10^(−decimalPoint)
+     */
+    float getConcentrationFloat(void) const;
+
+    /**
+     * @brief SMX100 手册表 3：气体码 → 类型缩写（与 SEN07xx 固件 `SensorDriver` 映射表一致）
+     * @n 已知码：0x01 CH4、0x03 H2S、0x04 CO、0x05 O2（表随手册扩充时在此与固件同步维护）
+     * @return true 已写入 buf（含 '\\0'）；false 未知码且 buf[0] 置为 '\\0'
+     */
+    static bool gasCodeToTypeName(uint8_t gasCode, char *buf, size_t bufLen);
+
+    /**
+     * @brief 气体码 → 默认单位（与固件一致，如 O2 为 "%VOL"）
+     * @return true 已知；false 未知且 buf[0]='\\0'
+     */
+    static bool gasCodeToDefaultUnit(uint8_t gasCode, char *buf, size_t bufLen);
+
+    /**
+     * @brief 未知气体码时的占位类型名，与固件相同格式：`0xNN`
+     */
+    static void gasCodeFormatUnknown(uint8_t gasCode, char *buf, size_t bufLen);
+
+    DFRobot_IntelligentGasSensorMeasure_t lastMeasure;
+
+    /**
+     * @brief 读取保持寄存器影子（长度 @ref DFROBOT_IGS_HOLDING_REG_COUNT）
+     */
+    uint8_t readHoldingShadow(uint16_t *regs);
+
+    /**
+     * @brief 写单个保持寄存器（如改地址、波特率编码等）
+     */
+    uint8_t writeHoldingReg(uint16_t reg, uint16_t value);
+
+    /**
+     * @brief 向 COMMIT 寄存器写入 @ref DFROBOT_IGS_COMMIT_KEY_SAVE_CONFIG，将波特率/校验/从站地址写入传感器 NVM
+     */
+    uint8_t commitConfiguration(void);
+
+private:
+    uint8_t _slave;
+    static void unpackChars(const uint16_t *table, uint8_t startIndex, uint8_t regCount, char *out,
+                            size_t outBytes);
+    void parseInputTable(const uint16_t *table, uint16_t regCount);
+    void applyGasStringsFromCode(void);
+    void applyTimestampFromRegs(const uint16_t *t);
+};
+
+#endif
