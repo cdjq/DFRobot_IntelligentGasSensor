@@ -94,14 +94,10 @@ void DFRobot_IntelligentGasSensor::gasCodeFormatUnknown(uint8_t gasCode, char *b
     (void)snprintf(buf, bufLen, "0x%02X", (unsigned)gasCode);
 }
 
-DFRobot_IntelligentGasSensor::DFRobot_IntelligentGasSensor(Stream *s, int dePin, uint8_t slaveAddr)
-    : DFRobot_RTU(s, dePin), _slave(slaveAddr) {
+DFRobot_IntelligentGasSensor::DFRobot_IntelligentGasSensor(Stream *s, uint8_t slaveAddr, int dePin)
+    : DFRobot_RTU(s, dePin), _slave(slaveAddr), _modbusStream(s) {
     memset(&lastMeasure, 0, sizeof(lastMeasure));
-}
-
-DFRobot_IntelligentGasSensor::DFRobot_IntelligentGasSensor(Stream *s, uint8_t slaveAddr)
-    : DFRobot_RTU(s), _slave(slaveAddr) {
-    memset(&lastMeasure, 0, sizeof(lastMeasure));
+    setTimeoutTimeMs(200);
 }
 
 void DFRobot_IntelligentGasSensor::setSlaveAddr(uint8_t addr) {
@@ -220,8 +216,7 @@ float DFRobot_IntelligentGasSensor::getConcentrationFloat(void) const {
 uint8_t DFRobot_IntelligentGasSensor::readHoldingShadow(uint16_t *regs) {
     if (!regs)
         return 3;
-    const uint16_t byteLen = (uint16_t)(DFROBOT_IGS_HOLDING_REG_COUNT * sizeof(uint16_t));
-    return readHoldingRegister(_slave, 0, regs, byteLen);
+    return readHoldingRegister(_slave, 0, regs, DFROBOT_IGS_HOLDING_REG_COUNT);
 }
 
 uint8_t DFRobot_IntelligentGasSensor::writeHoldingReg(uint16_t reg, uint16_t value) {
@@ -239,6 +234,46 @@ uint8_t DFRobot_IntelligentGasSensor::setUartAutoReport(bool enable, bool commit
     if (!commitToEeprom)
         return 0;
     return commitConfiguration();
+}
+
+uint8_t DFRobot_IntelligentGasSensor::getAcquireMode(AcquireMode *mode) {
+    if (mode == nullptr)
+        return 3;
+    uint16_t hold[DFROBOT_IGS_HOLDING_REG_COUNT];
+    const uint8_t err = readHoldingShadow(hold);
+    if (err != 0)
+        return err;
+    const uint16_t v = hold[DFROBOT_IGS_HOLD_REG_UART_AUTO_REPORT];
+    if (v == 0u)
+        *mode = ACQUIRE_MODE_PASSIVE;
+    else if (v == 1u)
+        *mode = ACQUIRE_MODE_ACTIVE;
+    else
+        *mode = ACQUIRE_MODE_UNKNOWN;
+    return 0;
+}
+
+uint8_t DFRobot_IntelligentGasSensor::setAcquireMode(AcquireMode mode, bool commitToEeprom) {
+    if (mode != ACQUIRE_MODE_PASSIVE && mode != ACQUIRE_MODE_ACTIVE)
+        return 3;
+    return setUartAutoReport(mode == ACQUIRE_MODE_ACTIVE, commitToEeprom);
+}
+
+uint8_t DFRobot_IntelligentGasSensor::getAcquireMode(uint8_t *mode) {
+    if (mode == nullptr)
+        return 3;
+    AcquireMode m = ACQUIRE_MODE_UNKNOWN;
+    const uint8_t err = getAcquireMode(&m);
+    if (err != 0)
+        return err;
+    *mode = (uint8_t)m;
+    return 0;
+}
+
+uint8_t DFRobot_IntelligentGasSensor::setAcquireMode(uint8_t mode, bool commitToEeprom) {
+    if (mode != (uint8_t)ACQUIRE_MODE_PASSIVE && mode != (uint8_t)ACQUIRE_MODE_ACTIVE)
+        return 3;
+    return setUartAutoReport(mode != 0u, commitToEeprom);
 }
 
 uint8_t DFRobot_IntelligentGasSensor::parseUnsolicitedInputReadResponse(const uint8_t *adu, size_t len) {
@@ -259,6 +294,53 @@ uint8_t DFRobot_IntelligentGasSensor::parseUnsolicitedInputReadResponse(const ui
     }
     parseInputTable(table, DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP);
     return 0;
+}
+
+uint8_t DFRobot_IntelligentGasSensor::pollUnsolicitedAutoReport(void) {
+    if (_modbusStream == nullptr)
+        return 9;
+
+    while (_modbusStream->available()) {
+        const int c = _modbusStream->read();
+        if (c < 0)
+            break;
+        _autoRepLastMs = millis();
+        if (_autoRepLen < sizeof(_autoRepBuf))
+            _autoRepBuf[_autoRepLen++] = (uint8_t)c;
+        else {
+            memmove(_autoRepBuf, _autoRepBuf + 1, sizeof(_autoRepBuf) - 1);
+            _autoRepBuf[sizeof(_autoRepBuf) - 1] = (uint8_t)c;
+        }
+    }
+
+    const uint32_t now = millis();
+    if (_autoRepLen == 0)
+        return 1;
+    if ((uint32_t)(now - _autoRepLastMs) < (uint32_t)DFROBOT_IGS_AUTO_REPORT_IDLE_MS)
+        return 1;
+
+    constexpr size_t kAdu = kUnsolicitedFc04Len;
+    if (_autoRepLen < kAdu) {
+        _autoRepLen = 0;
+        return 1;
+    }
+
+    for (size_t off = 0; off + kAdu <= _autoRepLen; ++off) {
+        const uint8_t pe = parseUnsolicitedInputReadResponse(_autoRepBuf + off, kAdu);
+        if (pe == 0) {
+            const uint16_t consumed = (uint16_t)(off + kAdu);
+            const size_t   tail     = (size_t)_autoRepLen - (size_t)consumed;
+            memmove(_autoRepBuf, _autoRepBuf + off + kAdu, tail);
+            _autoRepLen = (uint16_t)tail;
+            return 0;
+        }
+    }
+
+    if (_autoRepLen > 80)
+        _autoRepLen = 0;
+    else
+        memmove(_autoRepBuf, _autoRepBuf + 1, --_autoRepLen);
+    return 1;
 }
 
 uint8_t DFRobot_IntelligentGasSensor::setDeviceAddress(uint8_t newAddr) {

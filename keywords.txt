@@ -8,6 +8,7 @@
 
 DFRobot_IntelligentGasSensor	KEYWORD1
 DFRobot_IntelligentGasSensorMeasure_t	KEYWORD1
+AcquireMode	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
@@ -22,7 +23,10 @@ readHoldingShadow	KEYWORD2
 writeHoldingReg	KEYWORD2
 commitConfiguration	KEYWORD2
 setUartAutoReport	KEYWORD2
+getAcquireMode	KEYWORD2
+setAcquireMode	KEYWORD2
 parseUnsolicitedInputReadResponse	KEYWORD2
+pollUnsolicitedAutoReport	KEYWORD2
 setDeviceAddress	KEYWORD2
 getConcentrationFloat	KEYWORD2
 checkVid	KEYWORD2
@@ -39,3 +43,7 @@ DFROBOT_IGS_PID_SEN0742	LITERAL1
 DFROBOT_IGS_PID_SEN0746	LITERAL1
 DFROBOT_IGS_STATUS_VALID_MSK	LITERAL1
 DFROBOT_IGS_COMMIT_KEY_SAVE_CONFIG	LITERAL1
+DFROBOT_IGS_AUTO_REPORT_IDLE_MS	LITERAL1
+ACQUIRE_MODE_PASSIVE	LITERAL1
+ACQUIRE_MODE_ACTIVE	LITERAL1
+ACQUIRE_MODE_UNKNOWN	LITERAL1

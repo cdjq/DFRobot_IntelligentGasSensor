@@ -26,7 +26,7 @@ static const uint8_t kNewSlaveAddr = 5;
 #define RS485_DE_PIN 4
 #define USE_RS485 0
 #if USE_RS485
-DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, RS485_DE_PIN, kCurrentSlaveAddr);
+DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, kCurrentSlaveAddr, RS485_DE_PIN);
 #else
 DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, kCurrentSlaveAddr);
 #endif
@@ -44,7 +44,6 @@ void setup() {
 #else
     MODBUS_SERIAL.begin(kModbusBaud);
 #endif
-    sensor.setTimeoutTimeMs(200);
 
     Serial.print(F("Talking to slave "));
     Serial.print((unsigned)kCurrentSlaveAddr);

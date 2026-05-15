@@ -16,7 +16,7 @@ static const uint8_t kModbusSlave = 1;
 #define RS485_DE_PIN 4
 #define USE_RS485 0
 #if USE_RS485
-DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, RS485_DE_PIN, kModbusSlave);
+DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, kModbusSlave, RS485_DE_PIN);
 #else
 DFRobot_IntelligentGasSensor sensor(&MODBUS_SERIAL, kModbusSlave);
 #endif
@@ -33,7 +33,6 @@ void setup() {
 #else
     MODBUS_SERIAL.begin(kModbusBaud);
 #endif
-    sensor.setTimeoutTimeMs(150);
 }
 
 void loop() {
