@@ -8,9 +8,10 @@
  * **SEN0742**：UART 获取方式请用 @ref getAcquireMode / @ref setAcquireMode；主动上报测量请用 @ref pollUnsolicitedAutoReport（内部完成帧解析）。
  * 默认 `readMeasurement()` 不读时间戳区；需要时 `readMeasurementWithTimestamp()`。
  * 构造：`DFRobot_IntelligentGasSensor(Stream *s, uint8_t slaveAddr, int dePin = -1)`；`dePin < 0`（默认 -1）为 TTL 无 DE；RS-485 时传入 DE 引脚号（与 `DFRobot_RTU` 一致）。
+ * **I2C**：烧录 SEN07xx 固件侧 `GasI2cSlave` 时，主机可用 @ref DFRobot_IntelligentGasSensorI2C（`Wire`）；须先 `Wire.begin()`。Modbus 专有接口（如 @ref getAcquireMode）仅 UART 从机有效。
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
  * @license     The MIT License (MIT)
- * @version     V1.0
+ * @version     V1.1
  * @date        2026-05-14
  */
 #ifndef __DFRobot_IntelligentGasSensor_H__
@@ -156,6 +157,12 @@ public:
     uint8_t setAcquireMode(uint8_t mode, bool commitToEeprom = true);
 
     /**
+     * @brief 将 Modbus 顺序的输入寄存器表（从寄存器 0 起）解码到 `out`（与 FC 0x04 读表布局一致）。
+     * @n 供本类 Modbus 路径与 @ref DFRobot_IntelligentGasSensorI2C 共用。
+     */
+    static void fillLastMeasureFromInputRegs(DFRobot_IntelligentGasSensorMeasure_t *out, const uint16_t *t, uint16_t regCount);
+
+    /**
      * @brief 读取输入寄存器并填充 @ref lastMeasure（默认不读时间戳区，与常见无 RTC 传感器一致）
      * @param withTimestamp false（默认）：读到小数位（12 个寄存器）；true：再读 6 个时间寄存器（共 18 个）
      * @return 0 成功，非 0 为 DFRobot_RTU 异常码
@@ -187,9 +194,8 @@ public:
     uint8_t setDeviceAddress(uint8_t newAddr);
 
 private:
-    void parseInputTable(const uint16_t *table, uint16_t regCount);
-    void applyGasStringsFromCode(void);
-    void applyTimestampFromRegs(const uint16_t *t);
+    static void applyGasToMeasure(DFRobot_IntelligentGasSensorMeasure_t *m);
+    static void applyTimestampToMeasure(DFRobot_IntelligentGasSensorMeasure_t *m, const uint16_t *t);
 
     static bool gasCodeToTypeName(uint8_t gasCode, char *buf, size_t bufLen);
     static bool gasCodeToDefaultUnit(uint8_t gasCode, char *buf, size_t bufLen);

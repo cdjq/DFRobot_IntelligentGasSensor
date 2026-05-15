@@ -2,7 +2,7 @@
 
 * [English](./README.md)
 
-面向 **DFRobot 智能气体传感器（SEN07xx 系列 Modbus RTU 固件）** 的 Arduino **主机侧**库。在 **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** 之上实现 Modbus 组帧与 CRC，并完成寄存器语义解析：根据 SMX100 **气体码** 在主机侧得到 **气体类型 / 单位**，配合 **浓度原码与小数位** 计算浮点浓度；可选读取 **时间戳寄存器**；支持 SEN0742 类 **UART 主动上报** 的纯接收解析；提供 **获取模式**、**从站地址烧写** 等高层接口。
+面向 **DFRobot 智能气体传感器（SEN07xx 系列 Modbus RTU 固件）** 的 Arduino **主机侧**库。在 **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** 之上实现 Modbus 组帧与 CRC，并完成寄存器语义解析：根据 SMX100 **气体码** 在主机侧得到 **气体类型 / 单位**，配合 **浓度原码与小数位** 计算浮点浓度；可选读取 **时间戳寄存器**；支持 SEN0742 类 **UART 主动上报** 的纯接收解析；提供 **获取模式**、**从站地址烧写** 等高层接口。若从机固件启用 **I2C GasI2cSlave**，主机可用 **`DFRobot_IntelligentGasSensorI2C`**（`Wire`）读取与 Modbus 一致的译码结果。
 
 ## 目录
 
@@ -13,6 +13,7 @@
 * [构造函数说明](#构造函数说明)
 * [从站号：主机侧与传感器侧](#从站号主机侧与传感器侧)
 * [Methods（函数说明）](#methods函数说明)
+* [I2C GasI2cSlave](#i2c-gasi2cslave)
 * [示例程序](#示例程序)
 * [进阶：基类 DFRobot_RTU](#进阶基类-dfrobot_rtu)
 * [兼容性](#兼容性)
@@ -22,6 +23,7 @@
 
 * 使用 `readMeasurement()` 轮询测量（默认读 12 个输入寄存器，不含时间戳区）；需要时钟寄存器时用 `readMeasurementWithTimestamp()`。
 * 成功后从 `lastMeasure` 读取解析结果，用 `getConcentrationFloat()` 得到浓度浮点数。
+* **I2C**：从机为 SEN07xx 固件侧 `GasI2cSlave` 时，包含 `DFRobot_IntelligentGasSensorI2C.h`，`Wire.begin()` 后使用 `DFRobot_IntelligentGasSensorI2C` 的 `readMeasurement()`；详见下文 **[I2C GasI2cSlave](#i2c-gasi2cslave)**。
 * **SEN0742 TTL**：用 `getAcquireMode` / `setAcquireMode` 在 **被动轮询** 与 **UART 主动上报** 之间切换；主动模式下用 `pollUnsolicitedAutoReport()` 从串口组帧并解析（不主动发 Modbus 请求）。
 * 使用 `setDeviceAddress()` 修改传感器在总线上的 **Modbus 从站地址** 并写入 EEPROM（流程符合固件要求）。
 
@@ -154,14 +156,57 @@ uint8_t pollUnsolicitedAutoReport(void);
  * @return 0 成功；3 表示 newAddr 非法；其它非 0 为 RTU 写失败或 COMMIT 失败。
  */
 uint8_t setDeviceAddress(uint8_t newAddr);
+
+/**
+ * @brief 将 Modbus 顺序输入寄存器表（从 0 起）解码到 `out`（与 FC 0x04 布局一致）。Modbus 与 I2C 路径共用。
+ */
+static void fillLastMeasureFromInputRegs(DFRobot_IntelligentGasSensorMeasure_t *out, const uint16_t *t, uint16_t regCount);
 ```
 
 类还 **公有继承 `DFRobot_RTU`**，进阶用法可直接调用基类方法（如 `setTimeoutTimeMs`、原始 `readInputRegister` / `writeHoldingRegister` 等），详见 [DFRobot_RTU README](https://github.com/DFRobot/DFRobot_RTU)。
+
+## I2C GasI2cSlave
+
+从机烧录带 **`GasI2cSlave`** 的固件（如 SEN0738 工程）时，主机通过 **`Wire`** 读气体数据。须 **先** `Wire.begin()`（RP2040 可再 `setSDA` / `setSCL` / `setClock`）。
+
+```cpp
+#include <Wire.h>
+#include <DFRobot_IntelligentGasSensorI2C.h>
+
+DFRobot_IntelligentGasSensorI2C gas(0x38, &Wire);
+
+void setup() {
+  Wire.begin();
+  // gas.setStopGapMicros(400);  // AVR 等可适当加大写 STOP 与读段间隔
+}
+
+void loop() {
+  if (gas.readMeasurementWithTimestamp() != DFROBOT_IGS_I2C_OK) {
+    Serial.println(F("read error"));
+    return;
+  }
+  Serial.print(gas.lastMeasure.gasType);
+  Serial.print(' ');
+  Serial.print(gas.getConcentrationFloat(), 2);
+  Serial.print(' ');
+  Serial.print(gas.lastMeasure.unit);
+  if (gas.lastMeasure.timestamp[0] != '\0') {
+    Serial.print(' ');
+    Serial.print(gas.lastMeasure.timestamp);
+  }
+  Serial.println();
+}
+```
+
+* **与 Modbus 类的区别**：I2C 类 **无** `getAcquireMode` / `setAcquireMode` / `pollUnsolicitedAutoReport` / `setDeviceAddress`（这些仅 UART Modbus）；I2C 改址用 **`programI2cAddress`**（0x08～0x77，写从机 EEPROM）。
+* **传输注意**：对 arduino-pico 从机须 **写子地址 + STOP**，短延时再 **`requestFrom`**（本库默认 RP2040 间隔约 400 µs，并对 WHO_AM_I **短时重读** 数次，与 SEN0738 `I2cMaster_GasSlaveRead` 一致）。若仍偶发 `DFROBOT_IGS_I2C_ERR_WHOAMI`，可再略调大 `setStopGapMicros`，或 `setVerifyWhoAmI(false)`（不推荐除非总线可信）。
+* **错误码**：`DFROBOT_IGS_I2C_OK`、`DFROBOT_IGS_I2C_ERR_WIRE_TX` 等见 `DFRobot_IntelligentGasSensorI2C.h`。
 
 ## 示例程序
 
 | 例程 | 说明 |
 |------|------|
+| `readGasI2c` | I2C 主机：与 `readGasModbus` 相同浓度行，并固定带墙钟（`readMeasurementWithTimestamp`）在同一行末尾打印时间。 |
 | `readGasModbus` | 最简轮询：打印气体、浓度、单位；宏切换 TTL / RS-485。 |
 | `readGasMultiSlave` | 同一 UART 上多个从站，多实例轮询。 |
 | `changeMode` | 切换 UART 获取模式（被动 ↔ 主动）。 |

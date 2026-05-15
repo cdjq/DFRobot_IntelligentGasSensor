@@ -2,7 +2,7 @@
 
 * [中文版](./README_CN.md)
 
-Arduino host library for **DFRobot intelligent gas sensors** running **Modbus RTU** firmware (SEN07xx family). It builds on **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** for framing and CRC, and adds register decoding: gas type / unit from SMX100 **GAS_CODE**, raw concentration with decimal scaling, optional timestamp block, SEN0742-style UART **active report** reception, and high-level helpers such as **acquire mode** and **device address** programming.
+Arduino host library for **DFRobot intelligent gas sensors** running **Modbus RTU** firmware (SEN07xx family). It builds on **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** for framing and CRC, and adds register decoding: gas type / unit from SMX100 **GAS_CODE**, raw concentration with decimal scaling, optional timestamp block, SEN0742-style UART **active report** reception, and high-level helpers such as **acquire mode** and **device address** programming. When the sensor firmware exposes **`GasI2cSlave` over I2C**, use **`DFRobot_IntelligentGasSensorI2C`** on **`Wire`** for the same decoded `lastMeasure` fields.
 
 ## Table of contents
 
@@ -13,6 +13,7 @@ Arduino host library for **DFRobot intelligent gas sensors** running **Modbus RT
 * [Constructor note](#constructor-note)
 * [Slave address: host vs sensor](#slave-address-host-vs-sensor)
 * [Methods](#methods)
+* [I2C GasI2cSlave](#i2c-gasi2cslave)
 * [Examples](#examples)
 * [Advanced: base class `DFRobot_RTU`](#advanced-base-class-dfrobot_rtu)
 * [Compatibility](#compatibility)
@@ -22,6 +23,7 @@ Arduino host library for **DFRobot intelligent gas sensors** running **Modbus RT
 
 * Poll the sensor with `readMeasurement()` (default: 12 input registers, no RTC block) or `readMeasurementWithTimestamp()` for the full 18 registers.
 * Read decoded fields from `lastMeasure` and a float concentration via `getConcentrationFloat()`.
+* **I2C**: when firmware provides **`GasI2cSlave`**, include **`DFRobot_IntelligentGasSensorI2C.h`**, call **`Wire.begin()`**, then use **`DFRobot_IntelligentGasSensorI2C::readMeasurement()`** — see **[I2C GasI2cSlave](#i2c-gasi2cslave)**.
 * **SEN0742 TTL UART**: switch **passive Modbus poll** vs **active FC 0x04 push** using `getAcquireMode` / `setAcquireMode`; in active mode use `pollUnsolicitedAutoReport()` to assemble frames from RX only.
 * Change the sensor’s Modbus slave ID on the bus with `setDeviceAddress()` (writes holding registers + EEPROM commit as required by firmware).
 
@@ -154,14 +156,57 @@ uint8_t pollUnsolicitedAutoReport(void);
  * @return 0 success; 3 if newAddr is out of range; other non-zero RTU write / commit errors.
  */
 uint8_t setDeviceAddress(uint8_t newAddr);
+
+/**
+ * @brief Decode Modbus-order input register table into `out` (same layout as FC 0x04 from address 0). Shared by Modbus and I2C paths.
+ */
+static void fillLastMeasureFromInputRegs(DFRobot_IntelligentGasSensorMeasure_t *out, const uint16_t *t, uint16_t regCount);
 ```
 
 Additional inherited members from **`DFRobot_RTU`** (e.g. `setTimeoutTimeMs`, raw `readInputRegister` / `writeHoldingRegister`, …) are available on the same object for advanced use; see the [DFRobot_RTU README](https://github.com/DFRobot/DFRobot_RTU).
+
+## I2C GasI2cSlave
+
+When the sensor firmware enables **`GasI2cSlave`** (see the SEN0738 firmware docs), the host reads gas data over **`Wire`**. Call **`Wire.begin()`** first (on RP2040 you may also set SDA/SCL pins and bus speed).
+
+```cpp
+#include <Wire.h>
+#include <DFRobot_IntelligentGasSensorI2C.h>
+
+DFRobot_IntelligentGasSensorI2C gas(0x38, &Wire);
+
+void setup() {
+  Wire.begin();
+  // gas.setStopGapMicros(400); // optional: larger gap after STOP before read on AVR-class boards
+}
+
+void loop() {
+  if (gas.readMeasurementWithTimestamp() != DFROBOT_IGS_I2C_OK) {
+    Serial.println(F("read error"));
+    return;
+  }
+  Serial.print(gas.lastMeasure.gasType);
+  Serial.print(' ');
+  Serial.print(gas.getConcentrationFloat(), 2);
+  Serial.print(' ');
+  Serial.print(gas.lastMeasure.unit);
+  if (gas.lastMeasure.timestamp[0] != '\0') {
+    Serial.print(' ');
+    Serial.print(gas.lastMeasure.timestamp);
+  }
+  Serial.println();
+}
+```
+
+* **Not available on I2C**: `getAcquireMode` / `setAcquireMode` / `pollUnsolicitedAutoReport` / `setDeviceAddress` (UART Modbus only). For I2C address EEPROM programming use **`programI2cAddress`** (allowed range **0x08–0x77** per firmware).
+* **Transaction shape**: with **arduino-pico** Wire slave firmware, use **write sub-address + STOP**, a short gap (this library defaults ~400 µs on RP2040), then **`requestFrom`** (no repeated-start read). **WHO_AM_I** is re-read a few times on mismatch (same idea as SEN0738 `I2cMaster_GasSlaveRead`). If `DFROBOT_IGS_I2C_ERR_WHOAMI` still appears, increase `setStopGapMicros`, or disable verification with `setVerifyWhoAmI(false)` only if you trust the bus.
+* **Return codes**: `DFROBOT_IGS_I2C_OK`, `DFROBOT_IGS_I2C_ERR_WIRE_TX`, … are defined in `DFRobot_IntelligentGasSensorI2C.h`.
 
 ## Examples
 
 | Sketch | Purpose |
 |--------|---------|
+| `readGasI2c` | I2C master: same concentration line as `readGasModbus`, plus wall-clock on the same line (`readMeasurementWithTimestamp`). |
 | `readGasModbus` | Minimal poll: gas name, value, unit. TTL / RS-485 selectable by macro. |
 | `readGasMultiSlave` | Multiple `DFRobot_IntelligentGasSensor` instances on one UART, different slave IDs. |
 | `changeMode` | Flip UART acquire mode (passive ↔ active) with `getAcquireMode` / `setAcquireMode`. |
