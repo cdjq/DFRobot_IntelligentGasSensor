@@ -3,7 +3,7 @@
  * @brief SEN0742：打开 UART 主动上报后，用 @ref DFRobot_IntelligentGasSensor::pollUnsolicitedAutoReport 只收解析。
  *
  * @details
- * `setup()` 刻意保持最短：只开串口、开主动上报。正式产品可再加 `readIdentification`、加长上电延时、
+ * `setup()` 刻意保持最短：只开串口、开主动上报。正式产品可再加链路探测、加长上电延时、
  * 排空 RX 等（见 `readGasModbus.ino`）。**从站号**须与传感器一致（`kModbusSlave`）。
  */
 #include <DFRobot_IntelligentGasSensor.h>

@@ -3,8 +3,8 @@
  * @brief Change the sensor Modbus slave ID using setDeviceAddress(), then read once to verify.
  *
  * Before uploading:
- * - Set @ref kCurrentSlaveAddr to the address your sensor uses now (factory default is often 1).
- * - Set @ref kNewSlaveAddr to the desired ID (1–247, must not clash with another device on the same bus).
+ * - Set `kCurrentSlaveAddr` to the address your sensor uses now (factory default is often 1).
+ * - Set `kNewSlaveAddr` to the desired ID (1–247, must not clash with another device on the same bus).
  * - Wire the Modbus UART / RS-485 like in readGasModbus (same MODBUS_SERIAL pins).
  *
  * After a successful change, the sensor answers only on the new ID until you change it again.
@@ -65,7 +65,7 @@ void setup() {
     }
 
     Serial.print(F("Done. New slave ID is "));
-    Serial.print((unsigned)sensor.getSlaveAddr());
+    Serial.print((unsigned)sensor.getClientSlaveAddr());
     Serial.println(F(" (saved to sensor EEPROM)."));
 
     if (sensor.readMeasurement() != 0) {

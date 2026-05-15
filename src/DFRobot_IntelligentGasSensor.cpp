@@ -100,7 +100,7 @@ DFRobot_IntelligentGasSensor::DFRobot_IntelligentGasSensor(Stream *s, uint8_t sl
     setTimeoutTimeMs(200);
 }
 
-void DFRobot_IntelligentGasSensor::setSlaveAddr(uint8_t addr) {
+void DFRobot_IntelligentGasSensor::setClientSlaveAddr(uint8_t addr) {
     if (addr >= DFROBOT_IGS_SLAVE_ADDR_MIN && addr <= DFROBOT_IGS_SLAVE_ADDR_MAX)
         _slave = addr;
 }
@@ -181,29 +181,6 @@ uint8_t DFRobot_IntelligentGasSensor::readMeasurement(bool withTimestamp) {
     return err;
 }
 
-uint8_t DFRobot_IntelligentGasSensor::readIdentification(uint16_t *pid, uint16_t *vid, uint16_t *version) {
-    uint16_t buf[6];
-    uint8_t  err = readInputRegister(_slave, 0, buf, 6);
-    if (err != 0)
-        return err;
-    if (pid)
-        *pid = buf[DFROBOT_IGS_IN_REG_PID];
-    if (vid)
-        *vid = buf[DFROBOT_IGS_IN_REG_VID];
-    if (version)
-        *version = buf[DFROBOT_IGS_IN_REG_VERSION];
-    return 0;
-}
-
-bool DFRobot_IntelligentGasSensor::checkVid(void) {
-    uint16_t pid = 0, vid = 0, ver = 0;
-    if (readIdentification(&pid, &vid, &ver) != 0)
-        return false;
-    (void)pid;
-    (void)ver;
-    return vid == DFROBOT_IGS_VID_DFRobot;
-}
-
 float DFRobot_IntelligentGasSensor::getConcentrationFloat(void) const {
     if (lastMeasure.decimalPoint > 12)
         return NAN;
@@ -236,7 +213,7 @@ uint8_t DFRobot_IntelligentGasSensor::setUartAutoReport(bool enable, bool commit
     return commitConfiguration();
 }
 
-uint8_t DFRobot_IntelligentGasSensor::getAcquireMode(AcquireMode *mode) {
+uint8_t DFRobot_IntelligentGasSensor::getAcquireMode(uint8_t *mode) {
     if (mode == nullptr)
         return 3;
     uint16_t hold[DFROBOT_IGS_HOLDING_REG_COUNT];
@@ -245,28 +222,11 @@ uint8_t DFRobot_IntelligentGasSensor::getAcquireMode(AcquireMode *mode) {
         return err;
     const uint16_t v = hold[DFROBOT_IGS_HOLD_REG_UART_AUTO_REPORT];
     if (v == 0u)
-        *mode = ACQUIRE_MODE_PASSIVE;
+        *mode = (uint8_t)ACQUIRE_MODE_PASSIVE;
     else if (v == 1u)
-        *mode = ACQUIRE_MODE_ACTIVE;
+        *mode = (uint8_t)ACQUIRE_MODE_ACTIVE;
     else
-        *mode = ACQUIRE_MODE_UNKNOWN;
-    return 0;
-}
-
-uint8_t DFRobot_IntelligentGasSensor::setAcquireMode(AcquireMode mode, bool commitToEeprom) {
-    if (mode != ACQUIRE_MODE_PASSIVE && mode != ACQUIRE_MODE_ACTIVE)
-        return 3;
-    return setUartAutoReport(mode == ACQUIRE_MODE_ACTIVE, commitToEeprom);
-}
-
-uint8_t DFRobot_IntelligentGasSensor::getAcquireMode(uint8_t *mode) {
-    if (mode == nullptr)
-        return 3;
-    AcquireMode m = ACQUIRE_MODE_UNKNOWN;
-    const uint8_t err = getAcquireMode(&m);
-    if (err != 0)
-        return err;
-    *mode = (uint8_t)m;
+        *mode = (uint8_t)ACQUIRE_MODE_UNKNOWN;
     return 0;
 }
 
@@ -352,7 +312,7 @@ uint8_t DFRobot_IntelligentGasSensor::setDeviceAddress(uint8_t newAddr) {
     if (e != 0)
         return e;
     /* 固件在写 0x0006 后立即用新从站号应答，主机必须先切到新地址再发 COMMIT */
-    setSlaveAddr(newAddr);
+    setClientSlaveAddr(newAddr);
     e = commitConfiguration();
     if (e != 0)
         return e;

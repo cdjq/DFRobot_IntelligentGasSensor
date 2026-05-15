@@ -21,9 +21,9 @@ DFRobot_IntelligentGasSensor gas3(&SENSOR_SERIAL, 3);
 
 static void printOne(DFRobot_IntelligentGasSensor &g) {
     Serial.print(F("  ID "));
-    if (g.getSlaveAddr() < 10)
+    if (g.getClientSlaveAddr() < 10)
         Serial.print(' ');
-    Serial.print(g.getSlaveAddr());
+    Serial.print(g.getClientSlaveAddr());
     Serial.print(F("  |  "));
     if (g.readMeasurement() != 0) {
         Serial.println(F("read fail"));
