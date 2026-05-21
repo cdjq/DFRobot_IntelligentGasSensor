@@ -18,6 +18,7 @@ Arduino host library for **DFRobot SEN07xx intelligent gas sensors** over **Modb
 * [Summary](#summary)
 * [Connected](#connected)
 * [Installation](#installation)
+* [CDC Configuration](#cdc-configuration)
 * [Calibration](#calibration)
 * [Methods](#methods)
 * [Compatibility](#compatibility)
@@ -54,6 +55,63 @@ Note: On-board **HOST UART is 3.3 V**. Do not connect TTL UART directly to **5 V
 1. Install dependency **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** into `Arduino/libraries`.
 2. Download this library into `Arduino/libraries`, restart the IDE.
 3. Open the `examples` folder and run a demo (e.g. `readGasRS485`).
+
+## CDC Configuration
+
+Besides the **Modbus RTU host port** (TTL / RS-485), SEN07xx modules expose a **USB CDC** virtual COM port for local setup and status (not Modbus frames on the RS-485 bus).
+
+| Item | Note |
+|------|------|
+| Connection | USB to PC; open the module’s **COM port** in a serial monitor |
+| Monitor | **115200 8N1** recommended (CDC / SenLog; independent of Modbus line speed, often 9600) |
+| Line ending | Press Enter after each command; type `help` for the full list |
+
+Typical banner after boot:
+
+```text
+=== available commands ===
+  help                          show this help
+  status                        print sensor + RTC + Modbus summary
+  settime YYYY-MM-DD HH:MM:SS   set RTC time
+  sensor sleep                  SMX100 probe SLEEP
+  sensor wake                   SMX100 probe RUN
+  modbus                        show host UART / slave settings
+  setaddr <1-247>               set Modbus slave ID (saved to EEPROM)
+  setbaud <2400|4800|9600|...>  set host UART baud (saved)
+  setparity <8N1|8E1|8O1|8N2>   set host UART format (saved)
+  modbus default                restore slave=1, 9600 8N1 (saved)
+```
+
+### Command reference
+
+| Command | Description |
+|---------|-------------|
+| `help` | Print command list |
+| `status` | Gas reading validity, probe RUN/SLEEP, RTC, Modbus slave ID and UART settings |
+| `settime YYYY-MM-DD HH:MM:SS` | Set RTC (e.g. `settime 2026-05-21 11:15:00`) |
+| `sensor sleep` | SMX100 probe **SLEEP** (immediate) |
+| `sensor wake` | SMX100 probe **RUN** (immediate) |
+| `modbus` | Show Modbus slave address, host UART baud rate and frame format |
+| `setaddr <1-247>` | Change slave ID and **save to EEPROM** |
+| `setbaud <rate>` | Change host UART baud and save: `2400` `4800` `9600` `14400` `19200` `38400` `57600` `115200` |
+| `setparity <fmt>` | Change host UART format and save: `8N1` `8E1` `8O1` `8N2` |
+| `modbus default` | Factory restore: **slave 1, 9600 8N1**, saved to EEPROM |
+
+### Mapping to Modbus registers / this library
+
+| CDC command | Holding register | Arduino host (this library) |
+|-------------|------------------|----------------------------|
+| `setaddr` | `0x0006` slave addr + `0x0007` COMMIT | `setDeviceAddress()` |
+| `setbaud` | `0x0003` baud code + COMMIT | `writeDeviceBaudCode()` + `Serial.begin` + `commitConfiguration()` (see `changeDeviceBaudrate`) |
+| `setparity` | `0x0004` parity/stop + COMMIT | Write holding `0x0004` then COMMIT (no dedicated API yet) |
+| `sensor sleep` / `sensor wake` | `0x0005` probe sleep (**not EEPROM**) | `setProbeSleep(true/false)` / `readProbeSleepMode()` |
+| `modbus` / `status` | — | Read input regs / `readMeasurement()`, etc. |
+
+Notes:
+
+* **CDC and Modbus are separate paths**: PC uses CDC for configuration; ESP32 etc. use RS-485/TTL Modbus to read gas data.
+* After changing baud via CDC, the Arduino host must `HOST_SERIAL.begin(...)` at the **same** rate.
+* Probe RUN/SLEEP is **holding register 0x0005 only**; input `0x0006` is reserved (no board-type field).
 
 ## Methods
 

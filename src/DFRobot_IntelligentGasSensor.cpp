@@ -143,7 +143,6 @@ void DFRobot_IntelligentGasSensor::fillLastMeasureFromInputRegs(DFRobot_Intellig
 
     if (regCount < 12u)
         goto done_valid;
-    out->boardType = t[DFROBOT_IGS_IN_REG_BOARD_TYPE];
     out->status    = t[DFROBOT_IGS_IN_REG_STATUS];
     out->gasCode   = (uint8_t)(t[DFROBOT_IGS_IN_REG_GAS_CODE] & 0xFFu);
     out->concentrationRaw = (uint32_t)t[DFROBOT_IGS_IN_REG_CONC_LO] | ((uint32_t)t[DFROBOT_IGS_IN_REG_CONC_HI] << 16);

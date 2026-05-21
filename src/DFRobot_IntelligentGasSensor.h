@@ -24,10 +24,6 @@
 
 #define DFROBOT_IGS_REGMAP_VERSION ((uint16_t)0x0100)
 
-#define DFROBOT_IGS_BOARD_UNKNOWN ((uint16_t)0)
-#define DFROBOT_IGS_BOARD_UART    ((uint16_t)1)
-#define DFROBOT_IGS_BOARD_RS485   ((uint16_t)2)
-
 #define DFROBOT_IGS_STATUS_VALID_MSK ((uint16_t)(1u << 0))
 
 #define DFROBOT_IGS_SLAVE_ADDR_MIN 1u
@@ -38,8 +34,10 @@
 #define DFROBOT_IGS_IN_REG_PID          0x0000u
 #define DFROBOT_IGS_IN_REG_VID          0x0001u
 #define DFROBOT_IGS_IN_REG_MODBUS_ADDR  0x0002u
+#define DFROBOT_IGS_IN_REG_RESERVED0    0x0003u
+#define DFROBOT_IGS_IN_REG_RESERVED1    0x0004u
 #define DFROBOT_IGS_IN_REG_VERSION      0x0005u
-#define DFROBOT_IGS_IN_REG_BOARD_TYPE   0x0006u
+#define DFROBOT_IGS_IN_REG_RESERVED2    0x0006u
 #define DFROBOT_IGS_IN_REG_STATUS       0x0007u
 #define DFROBOT_IGS_IN_REG_GAS_CODE     0x0008u
 #define DFROBOT_IGS_IN_REG_CONC_LO      0x0009u
@@ -90,7 +88,6 @@ typedef struct {
     uint16_t vid;
     uint8_t  modbusAddr;
     uint16_t registerMapVersion;
-    uint16_t boardType;
     uint16_t status;
     uint8_t  gasCode;
     uint32_t concentrationRaw;
