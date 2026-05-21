@@ -347,4 +347,4 @@ COMMIT 后模块已切到新波特率，主机须同步；用 **D2** 恢复 9600
 
 ---
 
-*文档版本：与 `DFRobot_IntelligentGasSensor` 库及 SEN0738 `RtuRegisterMap.h` 对齐。*
+*文档版本：与 `DFRobot_IntelligentGasSensor` 库 V1.0.0 及 [REGISTERMAP_MODBUS_CN.md](./REGISTERMAP_MODBUS_CN.md) 对齐。*

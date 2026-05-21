@@ -1,9 +1,23 @@
 /*!
  * @file readGasUART.ino
- * @brief Basic poll over TTL UART (no RS-485 DE pin).
+ * @brief 通过TTL串口（无RS-485 DE引脚）轮询读取SEN07xx智能气体传感器浓度。
+ * @n 主机TX/RX与传感器交叉连接，共地；默认9600 8N1，Modbus从机地址1。
+ * @n note: 传感器HOST UART为3.3V电平，仅支持3.3V主控（如ESP32）直连TTL，不支持5V UNO/Mega等。
+ * @n connected table (ESP32 TTL UART)
+ * -----------------------------------------------------------------------
+ * sensor pin |    ESP32     |
+ *     VCC    |    3.3V      |
+ *     GND    |    GND       |
+ *     RX     | GPIO17(TX2) |
+ *     TX     | GPIO36(RX2) |
+ * -----------------------------------------------------------------------
  *
- * Wiring: host TX/RX <-> sensor host UART (cross TX/RX), common GND.
- * Default: 9600 8N1, Modbus slave address 1.
+ * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
@@ -18,12 +32,12 @@ static const uint8_t         kSlave = 1;
 #define HOST_SERIAL Serial1
 #endif
 
-DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kSlave);
+DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlave);
 
 void setup() {
     Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, HOST_RX, HOST_TX);
+    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
     HOST_SERIAL.begin(kBaud);
 #endif

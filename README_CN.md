@@ -1,112 +1,238 @@
-# DFRobot_IntelligentGasSensor 智能气体传感器库（中文版）
+# DFRobot_IntelligentGasSensor
 
-* [English](./README.md)
+* [English Version](./README.md)
 
-面向 **SEN07xx Modbus RTU 固件** 的 Arduino 主机库：在 **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** 之上完成组帧/CRC，并根据 SMX100 **气体码** 译码类型与单位。支持 **TTL UART** 与 **RS-485**（构造时传入 DE 引脚）。
+面向 **DFRobot SEN07xx 智能气体传感器** 的 Arduino Modbus RTU 主机库，基于 **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)**。主要能力：<br>
+* **0x04**：读气体测量输入寄存器（`readMeasurement` / `readMeasurementWithTimestamp`）；
+* 主机侧根据 **GAS_CODE** 译码气体类型与单位；
+* **0x06** + COMMIT：修改 Modbus 从站地址（`setDeviceAddress`）；
+* **0x06**：写波特率保持寄存器 `0x0003`（`writeDeviceBaudCode` / `setDeviceBaudCode`）；
+* **0x06**：写保持 `0x0005` 控制探头 RUN/SLEEP（`setProbeSleep` / `readProbeSleepMode`，不落 EEPROM）；
+* `setClientSlaveAddr()`：仅切换主机侧目标从站号（不写传感器 EEPROM）。
 
-## 目录
+## Product Link（链接到英文商城）
 
-* [概述](#概述)
-* [依赖与安装](#依赖与安装)
-* [接线](#接线)
-* [快速开始](#快速开始)
-* [API 摘要](#api-摘要)
-* [示例](#示例)
-* [寄存器文档](#寄存器文档)
-* [许可证](#许可证)
 
-## 概述
+## Table of Contents
 
-* `readMeasurement()`：FC 0x04 读 12 个输入寄存器（至小数位，默认不含时间戳）。
-* `readMeasurementWithTimestamp()`：读满 18 个寄存器（含 RTC 时间）。
-* `getConcentrationFloat()`：`concentrationRaw × 10^(-decimalPoint)`。
-* `setDeviceAddress()`：写保持 `0x0006` 并 COMMIT，修改传感器 Modbus 从站号。
-* `writeDeviceBaudCode()`：仅写保持 `0x0003`（不切主机波特率、不 COMMIT）；配合 `begin` + `commitConfiguration()` 见例程 `changeDeviceBaudrate`。
-* `setDeviceBaudCode()`：连续 `writeDeviceBaudCode` + `commitConfiguration`；若固件写 0x0003 后立即切线速，须用例程三步。
-* `setClientSlaveAddr()`：仅改主机侧请求目标地址，不写传感器 EEPROM。
-* `setProbeSleep()` / `readProbeSleepMode()`：写/读保持 `0x0005` 控制 SMX100 探头 RUN/SLEEP（**不落 EEPROM**）。
+* [Summary](#summary)
+* [Connected](#connected)
+* [Installation](#installation)
+* [Calibration](#calibration)
+* [Methods](#methods)
+* [Compatibility](#compatibility)
+* [History](#history)
+* [Credits](#credits)
 
-## 依赖与安装
+## Summary
 
-* 依赖 **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)**。
-* 将本库放入 `libraries` 后重启 IDE。
+本库将 SEN07xx 作为 Modbus RTU 从机进行读写，在 **DFRobot_RTU** 之上解析输入寄存器并填充 `lastMeasure`。默认链路：**9600 8N1**，从站地址 **1**。<br>
 
-## 接线
+例程见 `examples/`（如 `readGasRS485`、`readGasUART`、`changeDeviceAddress`、`changeDeviceBaudrate`）。寄存器表：[REGISTERMAP_MODBUS_CN.md](./docs/REGISTERMAP_MODBUS_CN.md)。
 
-| 模块 | 主控 |
-|------|------|
-| VCC / GND | 按模块要求 |
-| UART RX | 主控 TX |
-| UART TX | 主控 RX |
-| RS-485 DE | 构造函数第三参 `dePin` |
+## Connected
 
-波特率须与传感器一致（常见 **9600 8N1**）。使用硬件串口（`Serial1` / `Serial2`）。
+Hardware conneted table（以 ESP32 为例；传感器对外仅 **RS-485 A/B**，TX/RX/DE 接 **UART 转 RS485 模块**，不直连传感器）<br>
 
-## 快速开始
+| ESP32 引脚 | UART 转 RS485 模块 |
+|------------|-------------------|
+| 3.3V | VCC |
+| GND | GND |
+| GPIO17 (TX) | DI |
+| GPIO36 (RX) | RO |
+| GPIO16 | DE/RE（方向控制，对应构造函数的 `dePin`） |
 
-```cpp
-#include <DFRobot_IntelligentGasSensor.h>
+| UART 转 RS485 模块 | 传感器 (SEN07xx) |
+|-------------------|------------------|
+| A | A |
+| B | B |
 
-// TTL:  readGasUART
-// RS-485: readGasRS485 (DE=29 on SEN07xx RP2040 module)
-DFRobot_IntelligentGasSensor gas(&Serial1, 1);
+说明：板载 **HOST UART 为 3.3V**，**不支持** 5V 主控（UNO/Mega 等）直连 TTL；5V 主控请经 RS-485 模块连接。TTL 直连（无 DE）见 `readGasUART`（仅 3.3V ESP32）。
 
-void setup() {
-  Serial.begin(115200);
-  Serial1.begin(9600);
-}
+## Installation
 
-void loop() {
-  if (gas.readMeasurementWithTimestamp() == 0) {
-    if (gas.lastMeasure.timestamp[0]) {
-      Serial.print('[');
-      Serial.print(gas.lastMeasure.timestamp);
-      Serial.print("] ");
-    }
-    Serial.print(gas.lastMeasure.gasType);
-    Serial.print(' ');
-    Serial.print(gas.getConcentrationFloat(), 2);
-    Serial.print(' ');
-    Serial.println(gas.lastMeasure.unit);
-  }
-  delay(1000);
-}
+1. 先将依赖库 **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** 放入 `Arduino/libraries`。
+2. 下载本库到 `Arduino/libraries`，重启 IDE。
+3. 打开 `examples` 文件夹，运行对应例程（如 `readGasRS485`）。
+
+## Methods
+
+```C++
+/**
+ * @brief 构造气体传感器驱动对象。
+ * @param s:  用于 Modbus RTU 的串口 Stream 指针。
+ * @param slaveAddr:  Modbus 从站地址，范围 1~247 (0x01~0xF7)。
+ * @param dePin:  RS485 流控引脚，拉低接收、拉高发送；-1 表示 TTL UART（无 DE）。
+ */
+DFRobot_IntelligentGasSensor(Stream *s, uint8_t slaveAddr, int dePin = -1);
+
+/**
+ * @brief 设置后续读写使用的从站地址（仅主机侧，不写 EEPROM）。
+ * @param addr:  Modbus 从站地址，范围 1~247 (0x01~0xF7)。
+ */
+void setClientSlaveAddr(uint8_t addr);
+
+/**
+ * @brief 获取当前对象使用的 Modbus 从站地址。
+ * @return 从站地址 (1~247)。
+ */
+uint8_t getClientSlaveAddr(void) const;
+
+/**
+ * @brief 将输入寄存器表解析为测量结构体。
+ * @param out:  输出测量结构体。
+ * @param t:  输入寄存器数组（从地址 0 起）。
+ * @param regCount:  寄存器个数（不含时间戳 12，含时间戳 18）。
+ */
+static void fillLastMeasureFromInputRegs(DFRobot_IntelligentGasSensorMeasure_t *out, const uint16_t *t, uint16_t regCount);
+
+/**
+ * @brief 读取气体测量值（FC04 输入寄存器）。
+ * @param withTimestamp:  false：读 0~11；true：读 0~17（含时间戳）。
+ * @return Exception code:
+ * @n      0 : sucess.
+ * @n      1 or eRTU_EXCEPTION_ILLEGAL_FUNCTION : 非法功能.
+ * @n      2 or eRTU_EXCEPTION_ILLEGAL_DATA_ADDRESS: 非法数据地址.
+ * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  非法数据值.
+ * @n      4 or eRTU_EXCEPTION_SLAVE_FAILURE:  从机故障.
+ * @n      8 or eRTU_EXCEPTION_CRC_ERROR:  CRC校验错误.
+ * @n      9 or eRTU_RECV_ERROR:  接收包错误.
+ * @n      10 or eRTU_MEMORY_ERROR: 内存错误.
+ * @n      11 or eRTU_ID_ERROR:广播地址或错误ID(因为主机无法收到从机广播包的应答)
+ */
+uint8_t readMeasurement(bool withTimestamp = false);
+
+/**
+ * @brief 读取气体测量值（含墙钟时间戳寄存器）。
+ * @return 异常码（同 readMeasurement()）。
+ */
+uint8_t readMeasurementWithTimestamp(void);
+
+/**
+ * @brief 根据 lastMeasure 中小数位将浓度原始值转为 float。
+ * @return 浓度浮点值；decimalPoint>12 时返回 NAN。
+ */
+float getConcentrationFloat(void) const;
+
+DFRobot_IntelligentGasSensorMeasure_t lastMeasure;
+
+/**
+ * @brief 修改传感器 Modbus 从站地址（写保持 0x0006 并 COMMIT 至 EEPROM）。
+ * @param newAddr:  新从站地址，范围 1~247 (0x01~0xF7)。
+ * @return Exception code:
+ * @n      0 : sucess.
+ * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  地址非法或未变化。
+ * @n      其余同 DFRobot_RTU 写/COMMIT 错误码。
+ */
+uint8_t setDeviceAddress(uint8_t newAddr);
+
+/**
+ * @brief 仅写传感器波特率保持寄存器 0x0003（FC06），COMMIT 前不落 EEPROM。
+ * @param code:  波特率编码：1=2400 … 8=115200。
+ * @return Exception code:
+ * @n      0 : sucess.
+ * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  非法波特率编码。
+ * @n      其余同 DFRobot_RTU 写错误码。
+ * @note 固件可能在应答后立即切换从站线速；主机须在 COMMIT 前 begin(新波特率)，见 changeDeviceBaudrate 例程。
+ */
+uint8_t writeDeviceBaudCode(uint16_t code);
+
+/**
+ * @brief 连续写波特率并 COMMIT（不改变主机串口波特率；SEN07xx 立即切线速时请用例程三步）。
+ * @param code:  波特率编码 (DFROBOT_IGS_BAUD_CODE_*)。
+ * @return 异常码（同 writeDeviceBaudCode() / commitConfiguration()）。
+ */
+uint8_t setDeviceBaudCode(uint16_t code);
+
+/**
+ * @brief 写保持 0x0005 设置探头 RUN/SLEEP（立即生效，不写 EEPROM）。
+ * @param sleep:  true=休眠，false=运行。
+ * @return 异常码（同 writeHoldingReg()）。
+ */
+uint8_t setProbeSleep(bool sleep);
+
+/**
+ * @brief 读保持 0x0005 获取探头 RUN/SLEEP 状态。
+ * @param outSleep:  true 表示休眠模式。
+ * @return Exception code:
+ * @n      0 : sucess.
+ * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  outSleep 为 NULL。
+ * @n      其余同 DFRobot_RTU 读错误码。
+ */
+uint8_t readProbeSleepMode(bool *outSleep);
+
+/**
+ * @brief 根据 measure 中 gasCode 译码 gasType、unit（主机侧表）。
+ * @param m:  测量结构体，须已填入 gasCode。
+ */
+static void applyGasToMeasure(DFRobot_IntelligentGasSensorMeasure_t *m);
+
+/**
+ * @brief 从输入寄存器表填充时间戳字段。
+ * @param m:  测量结构体。
+ * @param t:  输入寄存器数组（须含时间戳寄存器）。
+ */
+static void applyTimestampToMeasure(DFRobot_IntelligentGasSensorMeasure_t *m, const uint16_t *t);
+
+/**
+ * @brief 气体码映射为类型名字符串。
+ * @param gasCode:  输入寄存器 GAS_CODE。
+ * @param buf:  输出缓冲区。
+ * @param bufLen:  缓冲区长度。
+ * @return 已知码返回 true，未知返回 false（buf 清空）。
+ */
+static bool gasCodeToTypeName(uint8_t gasCode, char *buf, size_t bufLen);
+
+/**
+ * @brief 气体码映射为默认单位字符串。
+ * @param gasCode:  输入寄存器 GAS_CODE。
+ * @param buf:  输出缓冲区。
+ * @param bufLen:  缓冲区长度。
+ * @return 已知码返回 true，未知返回 false（buf 清空）。
+ */
+static bool gasCodeToDefaultUnit(uint8_t gasCode, char *buf, size_t bufLen);
+
+/**
+ * @brief 将未知气体码格式化为十六进制字符串（如 "0x1A"）。
+ * @param gasCode:  气体码。
+ * @param buf:  输出缓冲区。
+ * @param bufLen:  缓冲区长度。
+ */
+static void gasCodeFormatUnknown(uint8_t gasCode, char *buf, size_t bufLen);
+
+/**
+ * @brief 写当前从站的一个保持寄存器。
+ * @param reg:  保持寄存器地址。
+ * @param value:  写入值。
+ * @return 异常码（同 DFRobot_RTU writeHoldingRegister()）。
+ */
+uint8_t writeHoldingReg(uint16_t reg, uint16_t value);
+
+/**
+ * @brief 将配置 COMMIT 到传感器 EEPROM（向保持 COMMIT 写 0xA501）。
+ * @return 异常码（同 DFRobot_RTU writeHoldingRegister()）。
+ */
+uint8_t commitConfiguration(void);
 ```
 
-## API 摘要
+## Compatibility
 
-| API | 说明 |
-|-----|------|
-| `DFRobot_IntelligentGasSensor(Stream*, slave, dePin=-1)` | 构造；`dePin=-1` 为 TTL |
-| `readMeasurement(withTimestamp=false)` | 读测量，填充 `lastMeasure` |
-| `readMeasurementWithTimestamp()` | 含时间戳寄存器 |
-| `getConcentrationFloat()` | 浮点浓度 |
-| `setClientSlaveAddr` / `getClientSlaveAddr` | 仅主机侧从站号 |
-| `setDeviceAddress` | 写传感器从站号 + EEPROM |
-| `writeDeviceBaudCode` | 仅写传感器波特率寄存器 0x0003 |
-| `setDeviceBaudCode` | 连续写波特率 + COMMIT（见头文件 @note；立即切线速固件请用例程三步） |
-| `setProbeSleep` / `readProbeSleepMode` | 探头休眠（保持 0x0005，立即生效） |
-| `fillLastMeasureFromInputRegs` | 静态译码（高级） |
+MCU                | RS-485（经转接模块） | TTL UART（仅 3.3V） |
+------------------ | :------------------: | :-----------------: |
+ESP32              |          √           |          √          |
+Arduino Uno (5V)   |          √           |          X          |
+Mega2560 (5V)      |          √           |          X          |
+Leonardo           |          √           |          X          |
+ESP8266            |          √           |          X          |
+micro:bit          |          X           |          X          |
 
-返回值 `0` 表示成功；非 `0` 为 DFRobot_RTU 错误码。
+须安装 **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)**，并使用硬件串口（`Serial1` / `Serial2`）。
 
-## 示例
+## History
 
-| 例程 | 说明 |
-|------|------|
-| `readGasUART` | 基础轮询（TTL UART，无 DE） |
-| `readGasRS485` | 基础轮询（RS-485，含 DE 引脚） |
-| `readGasMultiSlave` | 同一 RS-485 总线多从站（TTL 可去掉构造第三参 DE） |
-| `readGasMultiSlaveOneInstance` | 多从站：单实例 + `setClientSlaveAddr` 切换（不写 EEPROM） |
-| `probeSleepWake` | 串口发 S/W/P/M：休眠、唤醒、读模式、读浓度 |
-| `changeDeviceAddress` | 修改从站地址并 COMMIT |
-| `changeDeviceBaudrate` | 9600→19200：写 0x0003 → `begin` 同速 → COMMIT，之后一直 19200 轮询 |
+- Date 2026-05-21
+- Version V1.0.0
 
-## 寄存器文档
+## Credits
 
-* [REGISTERMAP_MODBUS_CN.md](./docs/REGISTERMAP_MODBUS_CN.md)
-* [MANUAL_TEST_RS485_MODBUS_CN.md](./docs/MANUAL_TEST_RS485_MODBUS_CN.md) — 十六进制帧手工联调
-
-## 许可证
-
-MIT — 见 [LICENCE](./LICENCE)。
+Written by [wxzed](xiao.wu@dfrobot.com), 2026. (Welcome to our [website](https://www.dfrobot.com/))

@@ -1,10 +1,25 @@
 /*!
  * @file readGasRS485.ino
- * @brief Basic poll over RS-485 (DE pin required).
+ * @brief 通过RS-485（需DE引脚）轮询读取SEN07xx智能气体传感器浓度。
+ * @n ESP32经UART转RS485模块连接传感器；传感器仅A/B端子；默认9600 8N1，从机地址1。
+ * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * ---------------------------------------------------------------------------------------------------------------
+ * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
+ *    3.3V    |      VCC        |        —        |
+ *    GND     |      GND        |        —        |
+ * GPIO17(TX)|       DI        |        —        |
+ * GPIO36(RX)|       RO        |        —        |
+ * GPIO16    |     DE/RE       |        —        |
+ *     —     |       A         |        A        |
+ *     —     |       B         |        B        |
+ * ---------------------------------------------------------------------------------------------------------------
  *
- * Wiring: host UART + DE -> transceiver; A/B to sensor RS-485.
- * SEN07xx RP2040 module: Serial1, DE = GPIO29 (change kDePin for your board).
- * Default: 9600 8N1, Modbus slave address 1.
+ * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
@@ -21,12 +36,12 @@ static const int kDePin = 16;
 static const int kDePin = 29;
 #endif
 
-DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kSlave, kDePin);
+DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlave, /*dePin =*/kDePin);
 
 void setup() {
     Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, HOST_RX, HOST_TX);
+    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
     HOST_SERIAL.begin(kBaud);
 #endif

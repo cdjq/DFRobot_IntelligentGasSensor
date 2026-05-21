@@ -1,14 +1,27 @@
 /*!
  * @file changeDeviceAddress.ino
- * @brief Change the sensor Modbus slave ID using setDeviceAddress(), then read once to verify.
+ * @brief 用setDeviceAddress()修改传感器Modbus从机地址并读数验证。
+ * @n 上传前设置kCurrentSlaveAddr与kNewSlaveAddr（1~247）；RS-485与TTL构造切换同readGasMultiSlave。
+ * @n 修改成功后传感器仅在新地址应答，直至再次修改。
+ * @n note: 传感器对外仅RS-485端子A、B；ESP32的TX/RX/DE接UART转RS485模块，模块A/B再接传感器。
+ * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * ---------------------------------------------------------------------------------------------------------------
+ * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
+ *    3.3V    |      VCC        |        —        |
+ *    GND     |      GND        |        —        |
+ * GPIO17(TX)|       DI        |        —        |
+ * GPIO36(RX)|       RO        |        —        |
+ * GPIO16    |     DE/RE       |        —        |
+ *     —     |       A         |        A        |
+ *     —     |       B         |        B        |
+ * ---------------------------------------------------------------------------------------------------------------
  *
- * Before uploading:
- * - Set kCurrentSlaveAddr / kNewSlaveAddr (1–247).
- * - RS-485 (default) vs TTL: comment one sensor line, uncomment the other (same as readGasMultiSlave).
- *
- * ESP32: RX=36, TX=17, DE=16.  RP2040 (SEN07xx): Serial1, DE=29.
- *
- * After a successful change, the sensor answers only on the new ID until you change it again.
+ * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
@@ -27,16 +40,16 @@ static const int kDePin = 16;
 static const int kDePin = 29;
 #endif
 
-// RS-485 (default)
-DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kCurrentSlaveAddr, kDePin);
-// TTL UART: comment the line above, uncomment below
-// DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kCurrentSlaveAddr);
+// RS-485（默认）
+DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kCurrentSlaveAddr, /*dePin =*/kDePin);
+// TTL：注释上一行，取消下一行注释
+// DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kCurrentSlaveAddr);
 
 void setup() {
     Serial.begin(115200);
 
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, HOST_RX, HOST_TX);
+    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
     HOST_SERIAL.begin(kBaud);
 #endif

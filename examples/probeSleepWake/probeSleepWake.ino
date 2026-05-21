@@ -1,14 +1,27 @@
 /*!
  * @file probeSleepWake.ino
- * @brief Control SEN07xx SMX100 probe RUN/SLEEP over Modbus holding reg 0x0005 (no EEPROM).
+ * @brief 通过Modbus保持寄存器0x0005控制SEN07xx探头运行/休眠（立即生效，不写EEPROM）。
+ * @n 串口监视器发送单字符（无需换行）：S=休眠，W=唤醒，P=查询模式，M=读一次浓度（休眠时可能无效）。
+ * @n 接线同readGasRS485（默认）或readGasUART，下方注释切换RS-485/TTL构造。
+ * @n note: 传感器对外仅RS-485端子A、B；ESP32的TX/RX/DE接UART转RS485模块，模块A/B再接传感器。
+ * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * ---------------------------------------------------------------------------------------------------------------
+ * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
+ *    3.3V    |      VCC        |        —        |
+ *    GND     |      GND        |        —        |
+ * GPIO17(TX)|       DI        |        —        |
+ * GPIO36(RX)|       RO        |        —        |
+ * GPIO16    |     DE/RE       |        —        |
+ *     —     |       A         |        A        |
+ *     —     |       B         |        B        |
+ * ---------------------------------------------------------------------------------------------------------------
  *
- * Serial Monitor: send a single character (no line ending needed):
- *   S — sleep probe (no new gas frames until wake)
- *   W — wake probe
- *   P — query probe mode (read holding 0x0005)
- *   M — read one measurement (may be invalid while SLEEP)
- *
- * Wiring: same as readGasRS485 (default) or readGasUART — toggle constructor block below.
+ * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
@@ -25,10 +38,10 @@ static const int kDePin = 16;
 static const int kDePin = 29;
 #endif
 
-// RS-485 (default)
-DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kSlave, kDePin);
-// TTL: comment line above, uncomment below
-// DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kSlave);
+// RS-485（默认）
+DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlave, /*dePin =*/kDePin);
+// TTL：注释上一行，取消下一行注释
+// DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlave);
 
 static void printProbeMode(void) {
     bool asleep = false;
@@ -65,7 +78,7 @@ static void printMeasurementLine(void) {
 void setup() {
     Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, HOST_RX, HOST_TX);
+    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
     HOST_SERIAL.begin(kBaud);
 #endif

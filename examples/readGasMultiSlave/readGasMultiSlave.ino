@@ -1,12 +1,27 @@
 /*!
  * @file readGasMultiSlave.ino
- * @brief Poll three Modbus slaves on one RS-485 bus (shared UART + DE).
+ * @brief 一条RS-485总线上用三个库对象（共享UART与DE）轮询多个Modbus从机。
+ * @n gas1/gas2/gas3共用HOST_SERIAL与kDePin，从机地址不同；默认1、5、3，请按实际模块修改。
+ * @n TTL与RS-485：注释/取消注释下方对应的三行构造即可切换。
+ * @n note: 传感器对外仅RS-485端子A、B；ESP32的TX/RX/DE接UART转RS485模块，模块A/B再接传感器。
+ * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * ---------------------------------------------------------------------------------------------------------------
+ * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
+ *    3.3V    |      VCC        |        —        |
+ *    GND     |      GND        |        —        |
+ * GPIO17(TX)|       DI        |        —        |
+ * GPIO36(RX)|       RO        |        —        |
+ * GPIO16    |     DE/RE       |        —        |
+ *     —     |       A         |        A        |
+ *     —     |       B         |        B        |
+ * ---------------------------------------------------------------------------------------------------------------
  *
- * Objects gas1 / gas2 / gas3 share HOST_SERIAL (and kDePin on RS-485), different slave IDs.
- * Switch TTL / RS-485: comment one constructor block, uncomment the other (see below).
- *
- * Default slaves: 1, 5, 3 — change to match your modules.
- * ESP32: RX=36, TX=17, DE=16.  RP2040 (SEN07xx): Serial1, DE=29.
+ * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
@@ -22,15 +37,15 @@ static const int kDePin = 16;
 static const int kDePin = 29;
 #endif
 
-// RS-485 (default)
-DFRobot_IntelligentGasSensor gas1(&HOST_SERIAL, 1, kDePin);
-DFRobot_IntelligentGasSensor gas2(&HOST_SERIAL, 5, kDePin);
-DFRobot_IntelligentGasSensor gas3(&HOST_SERIAL, 3, kDePin);
+// RS-485（默认）
+DFRobot_IntelligentGasSensor gas1(/*s =*/&HOST_SERIAL, /*slaveAddr =*/1, /*dePin =*/kDePin);
+DFRobot_IntelligentGasSensor gas2(/*s =*/&HOST_SERIAL, /*slaveAddr =*/5, /*dePin =*/kDePin);
+DFRobot_IntelligentGasSensor gas3(/*s =*/&HOST_SERIAL, /*slaveAddr =*/3, /*dePin =*/kDePin);
 
-// TTL UART: comment the three lines above, uncomment the three below
-// DFRobot_IntelligentGasSensor gas1(&HOST_SERIAL, 1);
-// DFRobot_IntelligentGasSensor gas2(&HOST_SERIAL, 5);
-// DFRobot_IntelligentGasSensor gas3(&HOST_SERIAL, 3);
+// TTL：注释上面三行，取消下面三行注释
+// DFRobot_IntelligentGasSensor gas1(/*s =*/&HOST_SERIAL, /*slaveAddr =*/1);
+// DFRobot_IntelligentGasSensor gas2(/*s =*/&HOST_SERIAL, /*slaveAddr =*/5);
+// DFRobot_IntelligentGasSensor gas3(/*s =*/&HOST_SERIAL, /*slaveAddr =*/3);
 
 static void printOne(DFRobot_IntelligentGasSensor &g) {
     Serial.print(F("  ID "));
@@ -61,7 +76,7 @@ static void printOne(DFRobot_IntelligentGasSensor &g) {
 void setup() {
     Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, HOST_RX, HOST_TX);
+    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
     HOST_SERIAL.begin(kBaud);
 #endif

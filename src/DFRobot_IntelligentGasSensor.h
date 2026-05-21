@@ -1,17 +1,13 @@
 /*!
  * @file DFRobot_IntelligentGasSensor.h
- * @brief Host-side Modbus RTU driver for DFRobot intelligent gas sensors (SEN07xx).
+ * @brief Modbus RTU host driver for DFRobot intelligent gas sensors (SEN07xx).
  *
- * @details
- * 寄存器与传感器固件 `RtuRegisterMap.h` 一致：总线仅 **GAS_CODE**；类型/单位由本库译码。
- * 时间戳为 **6 个输入寄存器**（年月日时分秒）；`lastMeasure.timestamp` 由库拼接便于打印。
- * 默认 `readMeasurement()` 不读时间戳区；需要时 `readMeasurementWithTimestamp()`。
- * 构造：`DFRobot_IntelligentGasSensor(Stream *s, uint8_t slaveAddr, int dePin = -1)`；
- * `dePin < 0` 为 TTL；RS-485 时传入 DE 引脚号（与 `DFRobot_RTU` 一致）。
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
- * @license     The MIT License (MIT)
- * @version     V1.3.2
- * @date        2026-05-20
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #ifndef __DFRobot_IntelligentGasSensor_H__
 #define __DFRobot_IntelligentGasSensor_H__
@@ -64,8 +60,7 @@
 #define DFROBOT_IGS_HOLD_REG_RESERVED2  0x0002u
 #define DFROBOT_IGS_HOLD_REG_BAUD_CODE    0x0003u
 #define DFROBOT_IGS_HOLD_REG_PARITY_STOP  0x0004u
-/** 与固件 SEN_RTU_HOLD_REG_PROBE_SLEEP：0=运行 1=休眠（CS），立即生效、不落 EEPROM */
-#define DFROBOT_IGS_HOLD_REG_RESERVED3  0x0005u
+#define DFROBOT_IGS_HOLD_REG_RESERVED3  0x0005u /**<Probe sleep holding register: 0=RUN, 1=SLEEP; immediate, not saved to EEPROM*/
 #define DFROBOT_IGS_HOLD_REG_PROBE_SLEEP  DFROBOT_IGS_HOLD_REG_RESERVED3
 #define DFROBOT_IGS_PROBE_SLEEP_RUN       0u
 #define DFROBOT_IGS_PROBE_SLEEP_SLEEP     1u
@@ -81,9 +76,8 @@
 #define DFROBOT_IGS_BAUD_CODE_38400  ((uint16_t)6)
 #define DFROBOT_IGS_BAUD_CODE_57600  ((uint16_t)7)
 #define DFROBOT_IGS_BAUD_CODE_115200 ((uint16_t)8)
-/** 与保持寄存器 0x0003 编码一致，供 `writeDeviceBaudCode()` / `setDeviceBaudCode()` 校验 */
-#define DFROBOT_IGS_BAUD_CODE_MIN    DFROBOT_IGS_BAUD_CODE_2400
-#define DFROBOT_IGS_BAUD_CODE_MAX    DFROBOT_IGS_BAUD_CODE_115200
+#define DFROBOT_IGS_BAUD_CODE_MIN    DFROBOT_IGS_BAUD_CODE_2400 /**<Minimum baud code for holding register 0x0003*/
+#define DFROBOT_IGS_BAUD_CODE_MAX    DFROBOT_IGS_BAUD_CODE_115200 /**<Maximum baud code for holding register 0x0003*/
 
 #define DFROBOT_IGS_PARITY_NONE  ((uint16_t)0u)
 #define DFROBOT_IGS_PARITY_ODD   ((uint16_t)1u)
@@ -111,48 +105,161 @@ typedef struct {
 
 class DFRobot_IntelligentGasSensor : public DFRobot_RTU {
 public:
+/**
+ * @brief Construct the gas sensor driver.
+ * @param s:  Pointer to the UART Stream used for Modbus RTU.
+ * @param slaveAddr:  Modbus slave address. Range: 1~247 (0x01~0xF7).
+ * @param dePin:  RS-485 DE pin; pull low to receive, pull high to send. Use -1 for TTL UART (no DE).
+ */
     DFRobot_IntelligentGasSensor(Stream *s, uint8_t slaveAddr, int dePin = -1);
 
+/**
+ * @brief Set the Modbus slave address used by subsequent read/write calls (host-side only, no EEPROM).
+ * @param addr:  Modbus slave address. Range: 1~247 (0x01~0xF7).
+ */
     void setClientSlaveAddr(uint8_t addr);
+
+/**
+ * @brief Get the current Modbus slave address used by this object.
+ * @return Modbus slave address (1~247).
+ */
     uint8_t getClientSlaveAddr(void) const { return _slave; }
 
+/**
+ * @brief Parse input register table into a measurement structure.
+ * @param out:  Output measurement structure.
+ * @param t:  Input register array (starting at address 0).
+ * @param regCount:  Number of registers in t (12 without timestamp, 18 with timestamp).
+ */
     static void fillLastMeasureFromInputRegs(DFRobot_IntelligentGasSensorMeasure_t *out, const uint16_t *t,
                                              uint16_t regCount);
 
+/**
+ * @brief Read gas measurement from the sensor (FC04 input registers).
+ * @param withTimestamp:  false: read registers 0~11 only; true: read 0~17 including wall-clock timestamp.
+ * @return Exception code:
+ * @n      0 : sucess.
+ * @n      1 or eRTU_EXCEPTION_ILLEGAL_FUNCTION : Illegal function.
+ * @n      2 or eRTU_EXCEPTION_ILLEGAL_DATA_ADDRESS: Illegal data address.
+ * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  Illegal data value.
+ * @n      4 or eRTU_EXCEPTION_SLAVE_FAILURE:  Slave failure.
+ * @n      8 or eRTU_EXCEPTION_CRC_ERROR:  CRC check error.
+ * @n      9 or eRTU_RECV_ERROR:  Receive packet error.
+ * @n      10 or eRTU_MEMORY_ERROR: Memory error.
+ * @n      11 or eRTU_ID_ERROR: Broadcasr address or error ID
+ */
     uint8_t readMeasurement(bool withTimestamp = false);
+
+/**
+ * @brief Read gas measurement including wall-clock timestamp registers.
+ * @return Exception code (same as readMeasurement()).
+ */
     uint8_t readMeasurementWithTimestamp(void);
+
+/**
+ * @brief Convert lastMeasure.concentrationRaw to float using lastMeasure.decimalPoint.
+ * @return Concentration as float; NAN if decimalPoint > 12.
+ */
     float getConcentrationFloat(void) const;
 
     DFRobot_IntelligentGasSensorMeasure_t lastMeasure;
 
+/**
+ * @brief Change sensor Modbus slave address (write holding 0x0006 + COMMIT to EEPROM).
+ * @param newAddr:  New Modbus slave address. Range: 1~247 (0x01~0xF7).
+ * @return Exception code:
+ * @n      0 : sucess.
+ * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  Illegal address (out of range or unchanged).
+ * @n      otherwise same as DFRobot_RTU write/COMMIT errors.
+ */
     uint8_t setDeviceAddress(uint8_t newAddr);
 
-    /**
-     * @brief 仅写传感器 Modbus 波特率保持寄存器 **0x0003**（FC06），不落 EEPROM、不 COMMIT。
-     * @param code `DFROBOT_IGS_BAUD_CODE_*`（1=2400 … 8=115200）；非法值返回 3。
-     * @return 0 成功，否则为 `DFRobot_RTU` 错误码。
-     * @note 固件在应答后常**立即**切从站线速；下一步应对 Modbus 串口 `begin(与 code 一致的波特率)` 再 `commitConfiguration()`，参见 `changeDeviceBaudrate`。
-     */
+/**
+ * @brief Write sensor baud-rate holding register 0x0003 only (FC06), not saved until COMMIT.
+ * @param code:  Baud code: 1=2400, 2=4800, 3=9600, 4=14400, 5=19200, 6=38400, 7=57600, 8=115200.
+ * @return Exception code:
+ * @n      0 : sucess.
+ * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  Illegal baud code.
+ * @n      otherwise same as DFRobot_RTU write errors.
+ * @note Firmware may switch slave UART baud immediately after ACK; host must begin(new baud) before COMMIT (see changeDeviceBaudrate example).
+ */
     uint8_t writeDeviceBaudCode(uint16_t code);
 
-    /**
-     * @brief 连续调用 `writeDeviceBaudCode()` 与 `commitConfiguration()`（中间不切主机串口波特率）。
-     * @note SEN07xx 在写 **0x0003** 后即切线速时，主机须在两次 Modbus 之间 `begin` 新波特率；请用例程 `changeDeviceBaudrate` 的三步：`writeDeviceBaudCode` → `begin` → `commitConfiguration`。
-     */
+/**
+ * @brief Write baud code then COMMIT (does not change host UART baud; prefer changeDeviceBaudrate flow for SEN07xx).
+ * @param code:  Baud code (DFROBOT_IGS_BAUD_CODE_*).
+ * @return Exception code (same as writeDeviceBaudCode() / commitConfiguration()).
+ */
     uint8_t setDeviceBaudCode(uint16_t code);
 
-    /** 探头休眠：写保持 0x0005，立即生效、不落 EEPROM（与固件 `sensor sleep`/`sensor wake` 一致） */
+/**
+ * @brief Set probe RUN/SLEEP via holding register 0x0005 (immediate, not EEPROM).
+ * @param sleep:  true=SLEEP, false=RUN.
+ * @return Exception code (same as writeHoldingReg()).
+ */
     uint8_t setProbeSleep(bool sleep);
-    /** 读保持 0x0005：true=SLEEP，false=RUN；返回 0 成功，非 0 为 DFRobot_RTU 错误码 */
+
+/**
+ * @brief Read probe RUN/SLEEP from holding register 0x0005.
+ * @param outSleep:  true if probe is in SLEEP mode.
+ * @return Exception code:
+ * @n      0 : sucess.
+ * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  outSleep is NULL.
+ * @n      otherwise same as DFRobot_RTU read errors.
+ */
     uint8_t readProbeSleepMode(bool *outSleep);
+
+/**
+ * @brief Decode gasCode in measure to gasType and unit strings (host-side table).
+ * @param m:  Measurement structure; gasCode must be set.
+ */
     static void applyGasToMeasure(DFRobot_IntelligentGasSensorMeasure_t *m);
+
+/**
+ * @brief Fill timestamp fields in measure from input register table.
+ * @param m:  Measurement structure.
+ * @param t:  Input register array (must include timestamp registers).
+ */
     static void applyTimestampToMeasure(DFRobot_IntelligentGasSensorMeasure_t *m, const uint16_t *t);
 
+/**
+ * @brief Map gas code to gas type name string.
+ * @param gasCode:  Gas code from input register GAS_CODE.
+ * @param buf:  Output buffer.
+ * @param bufLen:  Buffer size.
+ * @return true if known code, false if unknown (buf cleared).
+ */
     static bool gasCodeToTypeName(uint8_t gasCode, char *buf, size_t bufLen);
+
+/**
+ * @brief Map gas code to default unit string.
+ * @param gasCode:  Gas code from input register GAS_CODE.
+ * @param buf:  Output buffer.
+ * @param bufLen:  Buffer size.
+ * @return true if known code, false if unknown (buf cleared).
+ */
     static bool gasCodeToDefaultUnit(uint8_t gasCode, char *buf, size_t bufLen);
+
+/**
+ * @brief Format unknown gas code as hex string (e.g. "0x1A").
+ * @param gasCode:  Gas code.
+ * @param buf:  Output buffer.
+ * @param bufLen:  Buffer size.
+ */
     static void gasCodeFormatUnknown(uint8_t gasCode, char *buf, size_t bufLen);
 
+/**
+ * @brief Write one holding register on the current slave.
+ * @param reg:  Holding register address.
+ * @param value:  Value to write.
+ * @return Exception code (same as DFRobot_RTU writeHoldingRegister()).
+ */
     uint8_t writeHoldingReg(uint16_t reg, uint16_t value);
+
+/**
+ * @brief Commit configuration to sensor EEPROM (write 0xA501 to holding COMMIT).
+ * @return Exception code (same as DFRobot_RTU writeHoldingRegister()).
+ */
     uint8_t commitConfiguration(void);
 
     uint8_t _slave;

@@ -1,19 +1,33 @@
 /*!
  * @file readGasMultiSlaveOneInstance.ino
- * @brief Poll multiple Modbus slaves on one bus using a **single** `DFRobot_IntelligentGasSensor`
- *        and `setClientSlaveAddr()` to switch the target ID (no EEPROM change on sensors).
+ * @brief 一条总线上仅用一个库对象，通过setClientSlaveAddr()切换目标从机地址轮询读数（不改传感器EEPROM）。
+ * @n 与readGasMultiSlave对比：该例程用三个对象；本例程用一个对象每轮切换_slave。
+ * @n RS-485与TTL切换方式同readGasMultiSlave；默认从机列表1、5、3。
+ * @n note: 传感器对外仅RS-485端子A、B；ESP32的TX/RX/DE接UART转RS485模块，模块A/B再接传感器。
+ * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * ---------------------------------------------------------------------------------------------------------------
+ * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
+ *    3.3V    |      VCC        |        —        |
+ *    GND     |      GND        |        —        |
+ * GPIO17(TX)|       DI        |        —        |
+ * GPIO36(RX)|       RO        |        —        |
+ * GPIO16    |     DE/RE       |        —        |
+ *     —     |       A         |        A        |
+ *     —     |       B         |        B        |
+ * ---------------------------------------------------------------------------------------------------------------
  *
- * Compare with `readGasMultiSlave`: that sketch uses three objects sharing the same UART;
- * this one uses one object and switches `_slave` each round.
- *
- * RS-485 (default) vs TTL: same comment toggle as `readGasMultiSlave`.
- * ESP32: RX=36, TX=17, DE=16.  RP2040 (SEN07xx): Serial1, DE=29.
+ * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
 static const unsigned long kBaud = 9600;
 
-/** Modbus slave IDs on the bus — edit to match your modules */
+// 总线上的从机地址，按实际模块修改
 static const uint8_t kSlaveIds[] = { 1, 5, 3 };
 static const size_t kSlaveCount = sizeof(kSlaveIds) / sizeof(kSlaveIds[0]);
 
@@ -27,10 +41,10 @@ static const int kDePin = 16;
 static const int kDePin = 29;
 #endif
 
-// RS-485: initial ID should be kSlaveIds[0] (first poll target)
-DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kSlaveIds[0], kDePin);
-// TTL: comment line above, uncomment below
-// DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kSlaveIds[0]);
+// RS-485：初始地址应为kSlaveIds[0]
+DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveIds[0], /*dePin =*/kDePin);
+// TTL：注释上一行，取消下一行注释
+// DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveIds[0]);
 
 static void readAndPrint(void) {
     uint8_t id = sensor.getClientSlaveAddr();
@@ -62,7 +76,7 @@ static void readAndPrint(void) {
 void setup() {
     Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, HOST_RX, HOST_TX);
+    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
     HOST_SERIAL.begin(kBaud);
 #endif

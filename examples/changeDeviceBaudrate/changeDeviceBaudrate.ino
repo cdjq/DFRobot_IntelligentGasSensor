@@ -1,26 +1,35 @@
 /*!
  * @file changeDeviceBaudrate.ino
- * @brief Change sensor Modbus baud from factory 9600 to 19200, then keep communicating at 19200.
+ * @brief 将传感器Modbus波特率从出厂9600改为19200，之后主机与从站均保持19200通信。
+ * @n SEN07xx固件在写保持寄存器0x0003应答后会立即把从站UART切到新波特率；主机若仍用旧波特率发COMMIT会失败。
+ * @n 正确顺序：writeDeviceBaudCode → 立刻HOST_SERIAL.begin(新波特率) → commitConfiguration()。
+ * @n COMMIT成功表示新线速与EEPROM均已一致；之后loop一直用19200轮询。
+ * @n 上传前确认kSlaveAddr及传感器当前为kInitialBaud（默认9600）；RS-485/TTL构造切换同changeDeviceAddress。
+ * @n note: 传感器对外仅RS-485端子A、B；ESP32的TX/RX/DE接UART转RS485模块，模块A/B再接传感器。
+ * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * ---------------------------------------------------------------------------------------------------------------
+ * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
+ *    3.3V    |      VCC        |        —        |
+ *    GND     |      GND        |        —        |
+ * GPIO17(TX)|       DI        |        —        |
+ * GPIO36(RX)|       RO        |        —        |
+ * GPIO16    |     DE/RE       |        —        |
+ *     —     |       A         |        A        |
+ *     —     |       B         |        B        |
+ * ---------------------------------------------------------------------------------------------------------------
  *
- * SEN07xx 固件在写 0x0003 应答之后会**立即**把从站 Modbus UART 切到新波特率；主机若仍用旧波特率发 COMMIT 会失败。
- * 因此顺序必须是：`writeDeviceBaudCode` → **立刻**把 HOST_SERIAL 改成相同波特率 → `commitConfiguration()`。
- * COMMIT 若返回成功，说明整条链（新线速 + EEPROM）一致。
- *
- * Flow: 9600 → writeDeviceBaudCode(19200) → begin(19200) → COMMIT → 之后 **一直** 用 19200 轮询读数。
- *
- * 传感器 EEPROM 会保持 19200；其它默认 9600 的例程需先把 `HOST_SERIAL.begin` 改为 19200，或用 USB `setbaud` 等改回。
- *
- * Before uploading:
- * - Set kSlaveAddr and ensure the sensor really talks at kInitialBaud (default 9600).
- * - RS-485 vs TTL: same pattern as changeDeviceAddress (comment/uncomment sensor constructor).
- *
- * ESP32: RX=36, TX=17, DE=16.  RP2040 (SEN07xx): Serial1, DE=29.
+ * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
 static const unsigned long kInitialBaud = 9600;
 
-/** 目标线速（须与 DFROBOT_IGS_BAUD_CODE_* 一致） */
+// 目标线速（须与DFROBOT_IGS_BAUD_CODE_*一致）
 static const unsigned long kTargetUartBaud = 19200;
 static const uint16_t     kTargetBaudCode  = DFROBOT_IGS_BAUD_CODE_19200;
 
@@ -36,18 +45,18 @@ static const int kDePin = 16;
 static const int kDePin = 29;
 #endif
 
-DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kSlaveAddr, kDePin);
-// TTL: DFRobot_IntelligentGasSensor sensor(&HOST_SERIAL, kSlaveAddr);
+DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveAddr, /*dePin =*/kDePin);
+// TTL: DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveAddr);
 
 static void hostSerialBegin(unsigned long baud) {
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(baud, SERIAL_8N1, HOST_RX, HOST_TX);
+    HOST_SERIAL.begin(baud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
     HOST_SERIAL.begin(baud);
 #endif
 }
 
-/** 调用 `writeDeviceBaudCode` → `HOST_SERIAL.begin(lineBaud)` → `commitConfiguration()`（与固件“写后立即切线速”一致）。 */
+// writeDeviceBaudCode → HOST_SERIAL.begin(lineBaud) → commitConfiguration()
 static uint8_t writeBaudCodeReopenUartThenCommit(uint16_t code, unsigned long lineBaud) {
     uint8_t e = sensor.writeDeviceBaudCode(code);
     if (e != 0)
@@ -57,7 +66,6 @@ static uint8_t writeBaudCodeReopenUartThenCommit(uint16_t code, unsigned long li
     return sensor.commitConfiguration();
 }
 
-/** @param tag 前缀；可为 nullptr（ESP32 上勿传 F()：F 为 __FlashStringHelper*，与 const char* 不兼容） */
 static void printOneLine(const char *tag) {
     if (sensor.readMeasurementWithTimestamp() != 0) {
         if (tag)

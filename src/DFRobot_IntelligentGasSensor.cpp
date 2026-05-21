@@ -1,7 +1,13 @@
 /*!
  * @file DFRobot_IntelligentGasSensor.cpp
+ * @brief Modbus RTU host driver for DFRobot intelligent gas sensors (SEN07xx).
+ *
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
- * @license     The MIT License (MIT)
+ * @licence     The MIT License (MIT)
+ * @author [wxzed](xiao.wu@dfrobot.com)
+ * @version  V1.0.0
+ * @date  2026-05-21
+ * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include "DFRobot_IntelligentGasSensor.h"
 #include <stdio.h>
