@@ -232,7 +232,7 @@ uint8_t DFRobot_IntelligentGasSensor::setProbeSleep(bool sleep) {
     return writeHoldingReg(DFROBOT_IGS_HOLD_REG_PROBE_SLEEP, v);
 }
 
-uint8_t DFRobot_IntelligentGasSensor::readProbeSleepMode(bool *outSleep) {
+uint8_t DFRobot_IntelligentGasSensor::getProbeWorkMode(bool *outSleep) {
     if (outSleep == nullptr)
         return 3;
     uint16_t v = 0;

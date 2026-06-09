@@ -22,7 +22,7 @@ setDeviceAddress	KEYWORD2
 setDeviceBaudCode	KEYWORD2
 writeDeviceBaudCode	KEYWORD2
 setProbeSleep	KEYWORD2
-readProbeSleepMode	KEYWORD2
+getProbeWorkMode	KEYWORD2
 getConcentrationFloat	KEYWORD2
 fillLastMeasureFromInputRegs	KEYWORD2
 

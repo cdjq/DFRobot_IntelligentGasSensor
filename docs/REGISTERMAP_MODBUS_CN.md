@@ -68,7 +68,7 @@
 | 保持 | 0x0002 | 保留 | R/W | 0 | 读恒 0 |
 | 保持 | 0x0003 | 波特率编码 | R/W | 3 | 见下表；写后 SEN07xx 常在**应答后立刻**切从站线速，主机须在 COMMIT 前 `Serial.begin` 新波特率（例程 `changeDeviceBaudrate`） |
 | 保持 | 0x0004 | 校验/停止位 | R/W | 0 | 见下表；与 0x0003 一同 COMMIT 落盘 |
-| 保持 | 0x0005 | 探头休眠 | R/W | 0 | **0**=RUN，**1**=SLEEP；立即生效，**不落盘**；库 `setProbeSleep()` / `readProbeSleepMode()` |
+| 保持 | 0x0005 | 探头休眠 | R/W | 0 | **0**=RUN，**1**=SLEEP；立即生效，**不落盘**；库 `setProbeSleep()` / `getProbeWorkMode()` |
 | 保持 | 0x0006 | 从站地址 | R/W | 1 | 1～247；写后**立即**按新地址应答；持久化须 COMMIT；库 `setDeviceAddress()` |
 | 保持 | 0x0007 | COMMIT | W | 0xA501 | 将影子配置写入 EEPROM；库 `commitConfiguration()` |
 

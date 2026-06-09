@@ -45,9 +45,9 @@ DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlave, 
 
 static void printProbeMode(void) {
     bool asleep = false;
-    uint8_t e = sensor.readProbeSleepMode(&asleep);
+    uint8_t e = sensor.getProbeWorkMode(&asleep);
     if (e != 0) {
-        Serial.print(F("readProbeSleepMode err "));
+        Serial.print(F("getProbeWorkMode err "));
         Serial.println(e);
         return;
     }

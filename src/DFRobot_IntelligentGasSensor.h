@@ -210,14 +210,14 @@ public:
     uint8_t setProbeSleep(bool sleep);
 
 /**
- * @brief Read probe RUN/SLEEP from holding register 0x0005.
+ * @brief Get probe RUN/SLEEP work mode from holding register 0x0005.
  * @param outSleep:  true if probe is in SLEEP mode.
  * @return Exception code:
  * @n      0 : sucess.
  * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  outSleep is NULL.
  * @n      otherwise same as DFRobot_RTU read errors.
  */
-    uint8_t readProbeSleepMode(bool *outSleep);
+    uint8_t getProbeWorkMode(bool *outSleep);
 
 /**
  * @brief Decode gasCode in measure to gasType and unit strings (host-side table).

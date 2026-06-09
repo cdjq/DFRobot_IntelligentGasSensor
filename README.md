@@ -7,7 +7,7 @@ Arduino host library for **DFRobot SEN07xx intelligent gas sensors** over **Modb
 * Host-side decode **GAS_CODE** to gas type and unit;
 * FC **0x06** + COMMIT: Change Modbus slave address (`setDeviceAddress`);
 * FC **0x06**: Write baud holding register `0x0003` (`writeDeviceBaudCode` / `setDeviceBaudCode`);
-* FC **0x06**: Probe RUN/SLEEP via holding `0x0005` (`setProbeSleep` / `readProbeSleepMode`, not EEPROM);
+* FC **0x06**: Probe RUN/SLEEP via holding `0x0005` (`setProbeSleep` / `getProbeWorkMode`, not EEPROM);
 * `setClientSlaveAddr()`: Switch target slave on host only (no sensor EEPROM).
 
 ## Product Link（链接到英文商城）
@@ -104,7 +104,7 @@ Typical banner after boot:
 | `setaddr` | `0x0006` slave addr + `0x0007` COMMIT | `setDeviceAddress()` |
 | `setbaud` | `0x0003` baud code + COMMIT | `writeDeviceBaudCode()` + `Serial.begin` + `commitConfiguration()` (see `changeDeviceBaudrate`) |
 | `setparity` | `0x0004` parity/stop + COMMIT | Write holding `0x0004` then COMMIT (no dedicated API yet) |
-| `sensor sleep` / `sensor wake` | `0x0005` probe sleep (**not EEPROM**) | `setProbeSleep(true/false)` / `readProbeSleepMode()` |
+| `sensor sleep` / `sensor wake` | `0x0005` probe sleep (**not EEPROM**) | `setProbeSleep(true/false)` / `getProbeWorkMode()` |
 | `modbus` / `status` | — | Read input regs / `readGasMeasurementData()`, etc. |
 
 Notes:
@@ -211,7 +211,7 @@ uint8_t setProbeSleep(bool sleep);
  * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  outSleep is NULL.
  * @n      otherwise same as DFRobot_RTU read errors.
  */
-uint8_t readProbeSleepMode(bool *outSleep);
+uint8_t getProbeWorkMode(bool *outSleep);
 
 /**
  * @brief Decode gasCode in measure to gasType and unit strings (host-side table).

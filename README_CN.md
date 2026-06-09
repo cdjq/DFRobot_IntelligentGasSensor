@@ -7,7 +7,7 @@
 * 主机侧根据 **GAS_CODE** 译码气体类型与单位；
 * **0x06** + COMMIT：修改 Modbus 从站地址（`setDeviceAddress`）；
 * **0x06**：写波特率保持寄存器 `0x0003`（`writeDeviceBaudCode` / `setDeviceBaudCode`）；
-* **0x06**：写保持 `0x0005` 控制探头 RUN/SLEEP（`setProbeSleep` / `readProbeSleepMode`，不落 EEPROM）；
+* **0x06**：写保持 `0x0005` 控制探头 RUN/SLEEP（`setProbeSleep` / `getProbeWorkMode`，不落 EEPROM）；
 * `setClientSlaveAddr()`：仅切换主机侧目标从站号（不写传感器 EEPROM）。
 
 ## Product Link（链接到英文商城）
@@ -104,7 +104,7 @@ SEN07xx 模块除 **Modbus RTU 主机口**（TTL / RS-485）外，还提供 **US
 | `setaddr` | `0x0006` 从站地址 + `0x0007` COMMIT | `setDeviceAddress()` |
 | `setbaud` | `0x0003` 波特率编码 + COMMIT | `writeDeviceBaudCode()` + `Serial.begin` + `commitConfiguration()`（见 `changeDeviceBaudrate`） |
 | `setparity` | `0x0004` 校验/停止位 + COMMIT | 写保持 `0x0004` 后 COMMIT（库未封装专用 API） |
-| `sensor sleep` / `sensor wake` | `0x0005` 探头休眠（**不落 EEPROM**） | `setProbeSleep(true/false)` / `readProbeSleepMode()` |
+| `sensor sleep` / `sensor wake` | `0x0005` 探头休眠（**不落 EEPROM**） | `setProbeSleep(true/false)` / `getProbeWorkMode()` |
 | `modbus` / `status` | — | 读输入寄存器 / `readGasMeasurementData()` 等 |
 
 说明：
@@ -211,7 +211,7 @@ uint8_t setProbeSleep(bool sleep);
  * @n      3 or eRTU_EXCEPTION_ILLEGAL_DATA_VALUE:  outSleep 为 NULL。
  * @n      其余同 DFRobot_RTU 读错误码。
  */
-uint8_t readProbeSleepMode(bool *outSleep);
+uint8_t getProbeWorkMode(bool *outSleep);
 
 /**
  * @brief 根据 measure 中 gasCode 译码 gasType、unit（主机侧表）。
