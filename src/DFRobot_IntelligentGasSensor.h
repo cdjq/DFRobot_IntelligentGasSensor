@@ -83,6 +83,13 @@
 #define DFROBOT_IGS_STOPBIT_1    ((uint16_t)0u)
 #define DFROBOT_IGS_STOPBIT_2    ((uint16_t)(1u << 2))
 
+/** Default Modbus response timeout (ms); SEN07xx may block on CSV flash flush for ~1 s */
+#define DFROBOT_IGS_DEFAULT_TIMEOUT_MS  ((uint32_t)1000u)
+/** Extra read attempts after CRC/recv failure before returning error */
+#define DFROBOT_IGS_DEFAULT_READ_RETRIES  ((uint8_t)3u)
+/** Delay between read retries (ms) */
+#define DFROBOT_IGS_READ_RETRY_DELAY_MS   ((uint16_t)100u)
+
 typedef struct {
     uint16_t pid;
     uint16_t vid;
@@ -123,6 +130,18 @@ public:
     uint8_t getClientSlaveAddr(void) const { return _slave; }
 
 /**
+ * @brief Set extra retries after transient CRC/recv errors on readGasMeasurementData().
+ * @param count:  Additional attempts after the first failure (0 = single try).
+ */
+    void setReadRetryCount(uint8_t count);
+
+/**
+ * @brief Get extra read retries configured for readGasMeasurementData().
+ * @return Additional attempts after the first failure.
+ */
+    uint8_t getReadRetryCount(void) const { return _readRetries; }
+
+/**
  * @brief Parse input register table into a measurement structure.
  * @param out:  Output measurement structure.
  * @param t:  Input register array (starting at address 0).
@@ -145,13 +164,7 @@ public:
  * @n      10 or eRTU_MEMORY_ERROR: Memory error.
  * @n      11 or eRTU_ID_ERROR: Broadcasr address or error ID
  */
-    uint8_t readMeasurement(bool withTimestamp = false);
-
-/**
- * @brief Read gas measurement including wall-clock timestamp registers.
- * @return Exception code (same as readMeasurement()).
- */
-    uint8_t readMeasurementWithTimestamp(void);
+    uint8_t readGasMeasurementData(bool withTimestamp = false);
 
 /**
  * @brief Convert lastMeasure.concentrationRaw to float using lastMeasure.decimalPoint.
@@ -259,7 +272,8 @@ public:
  */
     uint8_t commitConfiguration(void);
 
-    uint8_t _slave;
+    uint8_t  _slave;
+    uint8_t  _readRetries;
 };
 
 #endif

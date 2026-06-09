@@ -77,7 +77,7 @@
 
 ### A2 读测量块（12 个寄存器，不含时间戳）— **最常用**
 
-对应库 `readMeasurement(false)`：从 `0x0000` 起读 12 字；`0x0006` 为保留（恒 0），气体测量相关为 `0x0007`～`0x000B`。
+对应库 `readGasMeasurementData(false)`：从 `0x0000` 起读 12 字；`0x0006` 为保留（恒 0），气体测量相关为 `0x0007`～`0x000B`。
 
 **发送**
 
@@ -339,8 +339,8 @@ COMMIT 后模块已切到新波特率，主机须同步；用 **D2** 恢复 9600
 
 | 手册项 | 库接口 |
 |--------|--------|
-| A2 | `readMeasurement(false)` |
-| A3 | `readMeasurementWithTimestamp()` |
+| A2 | `readGasMeasurementData(false)` |
+| A3 | `readGasMeasurementData(true)` |
 | B1 | 基类 `readHoldingRegister` / 内部影子 |
 | C3 | `setDeviceAddress(newAddr)` |
 | C1/C2 + C4 | 写保持寄存器 + `commitConfiguration()` |

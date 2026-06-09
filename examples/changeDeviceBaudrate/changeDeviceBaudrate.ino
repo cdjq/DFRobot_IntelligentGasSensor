@@ -67,7 +67,7 @@ static uint8_t writeBaudCodeReopenUartThenCommit(uint16_t code, unsigned long li
 }
 
 static void printOneLine(const char *tag) {
-    if (sensor.readMeasurementWithTimestamp() != 0) {
+    if (sensor.readGasMeasurementData(true) != 0) {
         if (tag)
             Serial.print(tag);
         Serial.println(F("read error"));
@@ -101,7 +101,7 @@ void setup() {
     Serial.print(kInitialBaud);
     Serial.println(F(" — checking..."));
 
-    if (sensor.readMeasurementWithTimestamp() != 0) {
+    if (sensor.readGasMeasurementData(true) != 0) {
         Serial.println(F("Cannot read. Fix kSlaveAddr / wiring / kInitialBaud."));
         for (;;)
             delay(1000);

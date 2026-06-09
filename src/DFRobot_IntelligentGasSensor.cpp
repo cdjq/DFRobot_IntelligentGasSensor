@@ -79,9 +79,13 @@ void DFRobot_IntelligentGasSensor::gasCodeFormatUnknown(uint8_t gasCode, char *b
 }
 
 DFRobot_IntelligentGasSensor::DFRobot_IntelligentGasSensor(Stream *s, uint8_t slaveAddr, int dePin)
-    : DFRobot_RTU(s, dePin), _slave(slaveAddr) {
+    : DFRobot_RTU(s, dePin), _slave(slaveAddr), _readRetries(DFROBOT_IGS_DEFAULT_READ_RETRIES) {
     memset(&lastMeasure, 0, sizeof(lastMeasure));
-    setTimeoutTimeMs(200);
+    setTimeoutTimeMs(DFROBOT_IGS_DEFAULT_TIMEOUT_MS);
+}
+
+void DFRobot_IntelligentGasSensor::setReadRetryCount(uint8_t count) {
+    _readRetries = count;
 }
 
 void DFRobot_IntelligentGasSensor::setClientSlaveAddr(uint8_t addr) {
@@ -157,18 +161,24 @@ done_valid:
     out->dataValid = (out->status & DFROBOT_IGS_STATUS_VALID_MSK) != 0;
 }
 
-uint8_t DFRobot_IntelligentGasSensor::readMeasurement(bool withTimestamp) {
-    if (withTimestamp) {
-        uint16_t table[DFROBOT_IGS_INPUT_REG_COUNT];
-        uint8_t  err = readInputRegister(_slave, 0, table, DFROBOT_IGS_INPUT_REG_COUNT);
+uint8_t DFRobot_IntelligentGasSensor::readGasMeasurementData(bool withTimestamp) {
+    const uint16_t regCount = withTimestamp ? DFROBOT_IGS_INPUT_REG_COUNT : DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP;
+    uint16_t       table[DFROBOT_IGS_INPUT_REG_COUNT];
+    uint8_t        err      = eRTU_RECV_ERROR;
+
+    for (uint8_t attempt = 0;; attempt++) {
+        err = readInputRegister(_slave, 0, table, regCount);
         if (err == 0)
-            fillLastMeasureFromInputRegs(&lastMeasure, table, DFROBOT_IGS_INPUT_REG_COUNT);
-        return err;
+            break;
+        if (err != eRTU_EXCEPTION_CRC_ERROR && err != eRTU_RECV_ERROR)
+            break;
+        if (attempt >= _readRetries)
+            break;
+        delay(DFROBOT_IGS_READ_RETRY_DELAY_MS);
     }
-    uint16_t table[DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP];
-    uint8_t  err = readInputRegister(_slave, 0, table, DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP);
+
     if (err == 0)
-        fillLastMeasureFromInputRegs(&lastMeasure, table, DFROBOT_IGS_INPUT_REG_COUNT_NO_TIMESTAMP);
+        fillLastMeasureFromInputRegs(&lastMeasure, table, regCount);
     return err;
 }
 
@@ -215,10 +225,6 @@ uint8_t DFRobot_IntelligentGasSensor::setDeviceBaudCode(uint16_t code) {
     if (e != 0)
         return e;
     return commitConfiguration();
-}
-
-uint8_t DFRobot_IntelligentGasSensor::readMeasurementWithTimestamp(void) {
-    return readMeasurement(true);
 }
 
 uint8_t DFRobot_IntelligentGasSensor::setProbeSleep(bool sleep) {

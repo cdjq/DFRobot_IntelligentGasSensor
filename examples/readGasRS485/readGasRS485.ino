@@ -48,8 +48,10 @@ void setup() {
 }
 
 void loop() {
-    if (sensor.readMeasurementWithTimestamp() != 0) {
-        Serial.println(F("read error"));
+    const uint8_t err = sensor.readGasMeasurementData(true);
+    if (err != 0) {
+        Serial.print(F("read error, code="));
+        Serial.println(err);
         delay(1000);
         return;
     }

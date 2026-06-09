@@ -18,12 +18,12 @@
 
 **32 位浓度**：**0x0009（低字）+ 0x000A（高字）**，组合为 32 位无符号整数（低字在前）。
 
-**主机库读长度**（`readMeasurement`）：
+**主机库读长度**（`readGasMeasurementData`）：
 
 | API | FC 0x04 起始地址 | 寄存器个数 | 说明 |
 |-----|------------------|------------|------|
-| `readMeasurement(false)` | 0x0000 | **12**（0x0000～0x000B） | 默认，不含时间戳 |
-| `readMeasurementWithTimestamp()` | 0x0000 | **18**（0x0000～0x0011） | 含年月日时分秒 |
+| `readGasMeasurementData(false)` | 0x0000 | **12**（0x0000～0x000B） | 默认，不含时间戳 |
+| `readGasMeasurementData(true)` | 0x0000 | **18**（0x0000～0x0011） | 含年月日时分秒 |
 
 ---
 
@@ -105,8 +105,8 @@
 
 | 库 API | 保持/输入 | 说明 |
 |--------|-----------|------|
-| `readMeasurement()` | 输入 0x0000～0x000B | FC 0x04，12 寄存器 |
-| `readMeasurementWithTimestamp()` | 输入 0x0000～0x0011 | FC 0x04，18 寄存器 |
+| `readGasMeasurementData(false)` | 输入 0x0000～0x000B | FC 0x04，12 寄存器 |
+| `readGasMeasurementData(true)` | 输入 0x0000～0x0011 | FC 0x04，18 寄存器 |
 | `writeDeviceBaudCode(code)` | 保持 0x0003 | 仅 FC 0x06，不 COMMIT |
 | `commitConfiguration()` | 保持 0x0007 = 0xA501 | FC 0x06 |
 | `setDeviceAddress(addr)` | 保持 0x0006 + COMMIT | |

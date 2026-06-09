@@ -53,7 +53,7 @@ static void printOne(DFRobot_IntelligentGasSensor &g) {
         Serial.print(' ');
     Serial.print(g.getClientSlaveAddr());
     Serial.print(F("  |  "));
-    if (g.readMeasurementWithTimestamp() != 0) {
+    if (g.readGasMeasurementData(true) != 0) {
         Serial.println(F("read fail"));
         return;
     }

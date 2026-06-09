@@ -53,7 +53,7 @@ static void readAndPrint(void) {
         Serial.print(' ');
     Serial.print(id);
     Serial.print(F("  |  "));
-    if (sensor.readMeasurementWithTimestamp() != 0) {
+    if (sensor.readGasMeasurementData(true) != 0) {
         Serial.println(F("read fail"));
         return;
     }

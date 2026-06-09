@@ -58,7 +58,7 @@ void setup() {
     Serial.print((unsigned)kCurrentSlaveAddr);
     Serial.println(F(" — checking link..."));
 
-    if (sensor.readMeasurementWithTimestamp() != 0) {
+    if (sensor.readGasMeasurementData(true) != 0) {
         Serial.println(F("Cannot read at current address. Fix kCurrentSlaveAddr / wiring / baud."));
         for (;;)
             delay(1000);
@@ -82,7 +82,7 @@ void setup() {
     Serial.print((unsigned)sensor.getClientSlaveAddr());
     Serial.println(F(" (saved to sensor EEPROM)."));
 
-    if (sensor.readMeasurementWithTimestamp() != 0) {
+    if (sensor.readGasMeasurementData(true) != 0) {
         Serial.println(F("Warning: read after change failed."));
     } else if (!sensor.lastMeasure.dataValid) {
         Serial.println(F("Verify read: link OK, data not valid yet."));
@@ -104,7 +104,7 @@ void setup() {
 }
 
 void loop() {
-    if (sensor.readMeasurementWithTimestamp() != 0) {
+    if (sensor.readGasMeasurementData(true) != 0) {
         Serial.println(F("read error"));
         delay(1000);
         return;

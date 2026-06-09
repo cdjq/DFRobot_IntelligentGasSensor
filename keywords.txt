@@ -15,8 +15,9 @@ DFRobot_IntelligentGasSensorMeasure_t	KEYWORD1
 
 setClientSlaveAddr	KEYWORD2
 getClientSlaveAddr	KEYWORD2
-readMeasurement	KEYWORD2
-readMeasurementWithTimestamp	KEYWORD2
+readGasMeasurementData	KEYWORD2
+setReadRetryCount	KEYWORD2
+getReadRetryCount	KEYWORD2
 setDeviceAddress	KEYWORD2
 setDeviceBaudCode	KEYWORD2
 writeDeviceBaudCode	KEYWORD2

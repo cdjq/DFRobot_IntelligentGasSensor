@@ -3,7 +3,7 @@
 * [中文版](./README_CN.md)
 
 Arduino host library for **DFRobot SEN07xx intelligent gas sensors** over **Modbus RTU**. Built on **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)**. Main features:<br>
-* FC **0x04**: Read gas measurement input registers (`readMeasurement` / `readMeasurementWithTimestamp`);
+* FC **0x04**: Read gas measurement input registers (`readGasMeasurementData`);
 * Host-side decode **GAS_CODE** to gas type and unit;
 * FC **0x06** + COMMIT: Change Modbus slave address (`setDeviceAddress`);
 * FC **0x06**: Write baud holding register `0x0003` (`writeDeviceBaudCode` / `setDeviceBaudCode`);
@@ -105,7 +105,7 @@ Typical banner after boot:
 | `setbaud` | `0x0003` baud code + COMMIT | `writeDeviceBaudCode()` + `Serial.begin` + `commitConfiguration()` (see `changeDeviceBaudrate`) |
 | `setparity` | `0x0004` parity/stop + COMMIT | Write holding `0x0004` then COMMIT (no dedicated API yet) |
 | `sensor sleep` / `sensor wake` | `0x0005` probe sleep (**not EEPROM**) | `setProbeSleep(true/false)` / `readProbeSleepMode()` |
-| `modbus` / `status` | — | Read input regs / `readMeasurement()`, etc. |
+| `modbus` / `status` | — | Read input regs / `readGasMeasurementData()`, etc. |
 
 Notes:
 
@@ -158,13 +158,7 @@ static void fillLastMeasureFromInputRegs(DFRobot_IntelligentGasSensorMeasure_t *
  * @n      10 or eRTU_MEMORY_ERROR: Memory error.
  * @n      11 or eRTU_ID_ERROR: Broadcasr address or error ID
  */
-uint8_t readMeasurement(bool withTimestamp = false);
-
-/**
- * @brief Read gas measurement including wall-clock timestamp registers.
- * @return Exception code (same as readMeasurement()).
- */
-uint8_t readMeasurementWithTimestamp(void);
+uint8_t readGasMeasurementData(bool withTimestamp = false);
 
 /**
  * @brief Convert lastMeasure.concentrationRaw to float using lastMeasure.decimalPoint.

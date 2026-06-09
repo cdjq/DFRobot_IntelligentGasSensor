@@ -55,8 +55,8 @@ static void printProbeMode(void) {
 }
 
 static void printMeasurementLine(void) {
-    if (sensor.readMeasurementWithTimestamp() != 0) {
-        Serial.println(F("readMeasurement error"));
+    if (sensor.readGasMeasurementData(true) != 0) {
+        Serial.println(F("readGasMeasurementData error"));
         return;
     }
     if (!sensor.lastMeasure.dataValid) {

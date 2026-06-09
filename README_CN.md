@@ -3,7 +3,7 @@
 * [English Version](./README.md)
 
 面向 **DFRobot SEN07xx 智能气体传感器** 的 Arduino Modbus RTU 主机库，基于 **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)**。主要能力：<br>
-* **0x04**：读气体测量输入寄存器（`readMeasurement` / `readMeasurementWithTimestamp`）；
+* **0x04**：读气体测量输入寄存器（`readGasMeasurementData`）；
 * 主机侧根据 **GAS_CODE** 译码气体类型与单位；
 * **0x06** + COMMIT：修改 Modbus 从站地址（`setDeviceAddress`）；
 * **0x06**：写波特率保持寄存器 `0x0003`（`writeDeviceBaudCode` / `setDeviceBaudCode`）；
@@ -105,7 +105,7 @@ SEN07xx 模块除 **Modbus RTU 主机口**（TTL / RS-485）外，还提供 **US
 | `setbaud` | `0x0003` 波特率编码 + COMMIT | `writeDeviceBaudCode()` + `Serial.begin` + `commitConfiguration()`（见 `changeDeviceBaudrate`） |
 | `setparity` | `0x0004` 校验/停止位 + COMMIT | 写保持 `0x0004` 后 COMMIT（库未封装专用 API） |
 | `sensor sleep` / `sensor wake` | `0x0005` 探头休眠（**不落 EEPROM**） | `setProbeSleep(true/false)` / `readProbeSleepMode()` |
-| `modbus` / `status` | — | 读输入寄存器 / `readMeasurement()` 等 |
+| `modbus` / `status` | — | 读输入寄存器 / `readGasMeasurementData()` 等 |
 
 说明：
 
@@ -158,13 +158,7 @@ static void fillLastMeasureFromInputRegs(DFRobot_IntelligentGasSensorMeasure_t *
  * @n      10 or eRTU_MEMORY_ERROR: 内存错误.
  * @n      11 or eRTU_ID_ERROR:广播地址或错误ID(因为主机无法收到从机广播包的应答)
  */
-uint8_t readMeasurement(bool withTimestamp = false);
-
-/**
- * @brief 读取气体测量值（含墙钟时间戳寄存器）。
- * @return 异常码（同 readMeasurement()）。
- */
-uint8_t readMeasurementWithTimestamp(void);
+uint8_t readGasMeasurementData(bool withTimestamp = false);
 
 /**
  * @brief 根据 lastMeasure 中小数位将浓度原始值转为 float。
