@@ -50,8 +50,10 @@ DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveAd
 
 static void hostSerialBegin(unsigned long baud) {
 #if defined(ARDUINO_ARCH_ESP32)
+    HOST_SERIAL.end();
     HOST_SERIAL.begin(baud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
+    HOST_SERIAL.end();
     HOST_SERIAL.begin(baud);
 #endif
 }
