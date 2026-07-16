@@ -1,21 +1,21 @@
 /*!
  * @file changeDeviceBaudrate.ino
- * @brief 将传感器Modbus波特率从出厂9600改为19200，之后主机与从站均保持19200通信。
- * @n SEN07xx固件在写保持寄存器0x0003应答后会立即把从站UART切到新波特率；主机若仍用旧波特率发COMMIT会失败。
- * @n 正确顺序：writeDeviceBaudCode → 立刻HOST_SERIAL.begin(新波特率) → commitConfiguration()。
- * @n COMMIT成功表示新线速与EEPROM均已一致；之后loop一直用19200轮询。
- * @n 上传前确认kSlaveAddr及传感器当前为kInitialBaud（默认9600）；RS-485/TTL构造切换同changeDeviceAddress。
- * @n note: 传感器对外仅RS-485端子A、B；ESP32的TX/RX/DE接UART转RS485模块，模块A/B再接传感器。
- * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * @brief Change the sensor Modbus baud rate from the factory 9600 setting to 19200.
+ * @n SEN07xx firmware switches the slave UART to the new baud rate immediately after replying to the holding-register 0x0003 write.
+ * @n Correct order: writeDeviceBaudCode -> immediately call HOST_SERIAL.begin(new baud) -> commitConfiguration().
+ * @n A successful COMMIT means the active line speed and EEPROM setting now match. The loop then keeps polling at 19200.
+ * @n Before uploading, confirm that kSlaveAddr and the sensor's current baud rate match kInitialBaud.
+ * @n note: The sensor exposes only RS-485 A/B terminals. Connect ESP32 TX/RX/DE to a UART-to-RS485 module, then connect the module A/B pins to the sensor.
+ * @n connected table (ESP32 + UART-to-RS485 module + sensor A/B)
  * ---------------------------------------------------------------------------------------------------------------
- * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
- *    3.3V    |      VCC        |        —        |
- *    GND     |      GND        |        —        |
- * GPIO17(TX)|       DI        |        —        |
- * GPIO36(RX)|       RO        |        —        |
- * GPIO16    |     DE/RE       |        —        |
- *     —     |       A         |        A        |
- *     —     |       B         |        B        |
+ * ESP32 pin | UART-to-RS485 module | Sensor (SEN07xx) |
+ *    3.3V   |          VCC         |        --        |
+ *    GND    |          GND         |        --        |
+ * GPIO17(TX)|          DI          |        --        |
+ * GPIO36(RX)|          RO          |        --        |
+ * GPIO16    |         DE/RE        |        --        |
+ *     --    |           A          |        A         |
+ *     --    |           B          |        B         |
  * ---------------------------------------------------------------------------------------------------------------
  *
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
@@ -23,13 +23,13 @@
  * @author [wxzed](xiao.wu@dfrobot.com)
  * @version  V1.0.0
  * @date  2026-05-21
- * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
+ * @url https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
 static const unsigned long kInitialBaud = 9600;
 
-// 目标线速（须与DFROBOT_IGS_BAUD_CODE_*一致）
+// Target line speed. Keep this in sync with DFROBOT_IGS_BAUD_CODE_*.
 static const unsigned long kTargetUartBaud = 19200;
 static const uint16_t     kTargetBaudCode  = DFROBOT_IGS_BAUD_CODE_19200;
 
@@ -58,7 +58,7 @@ static void hostSerialBegin(unsigned long baud) {
 #endif
 }
 
-// writeDeviceBaudCode → HOST_SERIAL.begin(lineBaud) → commitConfiguration()
+// writeDeviceBaudCode -> HOST_SERIAL.begin(lineBaud) -> commitConfiguration()
 static uint8_t writeBaudCodeReopenUartThenCommit(uint16_t code, unsigned long lineBaud) {
     uint8_t e = sensor.writeDeviceBaudCode(code);
     if (e != 0)
@@ -101,7 +101,7 @@ void setup() {
 
     Serial.print(F("Modbus link at "));
     Serial.print(kInitialBaud);
-    Serial.println(F(" — checking..."));
+    Serial.println(F(" - checking..."));
 
     if (sensor.readGasMeasurementData(true) != 0) {
         Serial.println(F("Cannot read. Fix kSlaveAddr / wiring / kInitialBaud."));
@@ -127,7 +127,7 @@ void setup() {
 
     Serial.print(F("COMMIT OK. Sensor + HOST_SERIAL now "));
     Serial.print(kTargetUartBaud);
-    Serial.println(F(" — loop will keep this baud."));
+    Serial.println(F(" - loop will keep this baud."));
 
     printOneLine("After change: ");
 }

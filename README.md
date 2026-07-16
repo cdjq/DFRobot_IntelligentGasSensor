@@ -10,7 +10,11 @@ Arduino host library for **DFRobot SEN07xx intelligent gas sensors** over **Modb
 * FC **0x06**: Probe RUN/SLEEP via holding `0x0005` (`setProbeSleep` / `getProbeWorkMode`, not EEPROM);
 * `setClientSlaveAddr()`: Switch target slave on host only (no sensor EEPROM).
 
-## Product Link（链接到英文商城）
+## Product Link（[https://www.dfrobot.com](https://www.dfrobot.com)）
+
+```text
+SKU: SEN0738 / SEN0739 / SEN0740 / SEN0741
+```
 
 
 ## Table of Contents
@@ -19,7 +23,6 @@ Arduino host library for **DFRobot SEN07xx intelligent gas sensors** over **Modb
 * [Connected](#connected)
 * [Installation](#installation)
 * [CDC Configuration](#cdc-configuration)
-* [Calibration](#calibration)
 * [Methods](#methods)
 * [Compatibility](#compatibility)
 * [History](#history)
@@ -272,10 +275,8 @@ uint8_t commitConfiguration(void);
 MCU                | RS-485 (via adapter) | TTL UART (3.3 V only) |
 ------------------ | :------------------: | :-------------------: |
 ESP32              |          √           |           √           |
-Arduino Uno (5 V)  |          √           |           X           |
 Mega2560 (5 V)     |          √           |           X           |
 Leonardo           |          √           |           X           |
-ESP8266            |          √           |           X           |
 micro:bit          |          X           |           X           |
 
 Requires **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** and a hardware UART (`Serial1` / `Serial2`).
@@ -287,4 +288,4 @@ Requires **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** and a hardwar
 
 ## Credits
 
-Written by [wxzed](xiao.wu@dfrobot.com), 2026. (Welcome to our [website](https://www.dfrobot.com/))
+Written by wxzed (xiao.wu@dfrobot.com), 2026. (Welcome to our [website](https://www.dfrobot.com/))

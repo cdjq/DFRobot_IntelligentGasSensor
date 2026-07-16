@@ -1,17 +1,17 @@
 /*!
  * @file readGasRS485.ino
- * @brief 通过RS-485（需DE引脚）轮询读取SEN07xx智能气体传感器浓度。
- * @n ESP32经UART转RS485模块连接传感器；传感器仅A/B端子；默认9600 8N1，从机地址1。
- * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * @brief Poll SEN07xx intelligent gas sensor concentration through RS-485 with a DE control pin.
+ * @n ESP32 connects to the sensor through a UART-to-RS485 module. The sensor exposes only A/B terminals; default bus settings are 9600 8N1 and slave address 1.
+ * @n connected table (ESP32 + UART-to-RS485 module + sensor A/B)
  * ---------------------------------------------------------------------------------------------------------------
- * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
- *    3.3V    |      VCC        |        —        |
- *    GND     |      GND        |        —        |
- * GPIO17(TX)|       DI        |        —        |
- * GPIO36(RX)|       RO        |        —        |
- * GPIO16    |     DE/RE       |        —        |
- *     —     |       A         |        A        |
- *     —     |       B         |        B        |
+ * ESP32 pin | UART-to-RS485 module | Sensor (SEN07xx) |
+ *    3.3V   |          VCC         |        --        |
+ *    GND    |          GND         |        --        |
+ * GPIO17(TX)|          DI          |        --        |
+ * GPIO36(RX)|          RO          |        --        |
+ * GPIO16    |         DE/RE        |        --        |
+ *     --    |           A          |        A         |
+ *     --    |           B          |        B         |
  * ---------------------------------------------------------------------------------------------------------------
  *
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
@@ -19,7 +19,7 @@
  * @author [wxzed](xiao.wu@dfrobot.com)
  * @version  V1.0.0
  * @date  2026-05-21
- * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
+ * @url https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 

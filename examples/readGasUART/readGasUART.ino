@@ -1,8 +1,8 @@
 /*!
  * @file readGasUART.ino
- * @brief 通过TTL串口（无RS-485 DE引脚）轮询读取SEN07xx智能气体传感器浓度。
- * @n 主机TX/RX与传感器交叉连接，共地；默认9600 8N1，Modbus从机地址1。
- * @n note: 传感器HOST UART为3.3V电平，仅支持3.3V主控（如ESP32）直连TTL，不支持5V UNO/Mega等。
+ * @brief Poll SEN07xx intelligent gas sensor concentration through TTL UART without an RS-485 DE pin.
+ * @n Cross-connect the host TX/RX pins with the sensor and share GND; default bus settings are 9600 8N1 and Modbus slave address 1.
+ * @n note: The sensor HOST UART is 3.3 V logic. Connect only to a 3.3 V host such as ESP32; do not connect directly to 5 V UNO/Mega boards.
  * @n connected table (ESP32 TTL UART)
  * -----------------------------------------------------------------------
  * sensor pin |    ESP32     |
@@ -17,7 +17,7 @@
  * @author [wxzed](xiao.wu@dfrobot.com)
  * @version  V1.0.0
  * @date  2026-05-21
- * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
+ * @url https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 

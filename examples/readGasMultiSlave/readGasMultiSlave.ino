@@ -1,19 +1,19 @@
 /*!
  * @file readGasMultiSlave.ino
- * @brief 一条RS-485总线上用三个库对象（共享UART与DE）轮询多个Modbus从机。
- * @n gas1/gas2/gas3共用HOST_SERIAL与kDePin，从机地址不同；默认1、5、3，请按实际模块修改。
- * @n TTL与RS-485：注释/取消注释下方对应的三行构造即可切换。
- * @n note: 传感器对外仅RS-485端子A、B；ESP32的TX/RX/DE接UART转RS485模块，模块A/B再接传感器。
- * @n connected table (ESP32 + UART转RS485模块 + 传感器A/B)
+ * @brief Poll multiple Modbus slaves on one RS-485 bus with three library objects sharing UART and DE.
+ * @n gas1, gas2, and gas3 share HOST_SERIAL and kDePin but use different slave addresses. Defaults are 1, 5, and 3.
+ * @n Switch between TTL and RS-485 by commenting or uncommenting the corresponding constructor block below.
+ * @n note: The sensor exposes only RS-485 A/B terminals. Connect ESP32 TX/RX/DE to a UART-to-RS485 module, then connect the module A/B pins to the sensor.
+ * @n connected table (ESP32 + UART-to-RS485 module + sensor A/B)
  * ---------------------------------------------------------------------------------------------------------------
- * ESP32 pin  | UART转RS485模块 | 传感器(SEN07xx) |
- *    3.3V    |      VCC        |        —        |
- *    GND     |      GND        |        —        |
- * GPIO17(TX)|       DI        |        —        |
- * GPIO36(RX)|       RO        |        —        |
- * GPIO16    |     DE/RE       |        —        |
- *     —     |       A         |        A        |
- *     —     |       B         |        B        |
+ * ESP32 pin | UART-to-RS485 module | Sensor (SEN07xx) |
+ *    3.3V   |          VCC         |        --        |
+ *    GND    |          GND         |        --        |
+ * GPIO17(TX)|          DI          |        --        |
+ * GPIO36(RX)|          RO          |        --        |
+ * GPIO16    |         DE/RE        |        --        |
+ *     --    |           A          |        A         |
+ *     --    |           B          |        B         |
  * ---------------------------------------------------------------------------------------------------------------
  *
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
@@ -21,7 +21,7 @@
  * @author [wxzed](xiao.wu@dfrobot.com)
  * @version  V1.0.0
  * @date  2026-05-21
- * @https://github.com/DFRobot/DFRobot_IntelligentGasSensor
+ * @url https://github.com/DFRobot/DFRobot_IntelligentGasSensor
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
@@ -37,12 +37,12 @@ static const int kDePin = 16;
 static const int kDePin = 29;
 #endif
 
-// RS-485（默认）
+// RS-485 by default.
 DFRobot_IntelligentGasSensor gas1(/*s =*/&HOST_SERIAL, /*slaveAddr =*/1, /*dePin =*/kDePin);
 DFRobot_IntelligentGasSensor gas2(/*s =*/&HOST_SERIAL, /*slaveAddr =*/5, /*dePin =*/kDePin);
 DFRobot_IntelligentGasSensor gas3(/*s =*/&HOST_SERIAL, /*slaveAddr =*/3, /*dePin =*/kDePin);
 
-// TTL：注释上面三行，取消下面三行注释
+// TTL: comment the three lines above and uncomment the three lines below.
 // DFRobot_IntelligentGasSensor gas1(/*s =*/&HOST_SERIAL, /*slaveAddr =*/1);
 // DFRobot_IntelligentGasSensor gas2(/*s =*/&HOST_SERIAL, /*slaveAddr =*/5);
 // DFRobot_IntelligentGasSensor gas3(/*s =*/&HOST_SERIAL, /*slaveAddr =*/3);
