@@ -37,12 +37,12 @@ static const unsigned long kBaud = 9600;
 
 // Slave addresses on the bus. Adjust them to match the actual modules.
 static const uint8_t kSlaveIds[] = { 1, 5, 3 };
-static const size_t kSlaveCount = sizeof(kSlaveIds) / sizeof(kSlaveIds[0]);
+static const size_t  kSlaveCount = sizeof(kSlaveIds) / sizeof(kSlaveIds[0]);
 
 #if defined(ARDUINO_ARCH_ESP32)
 #define HOST_SERIAL Serial2
-#define HOST_RX 36
-#define HOST_TX 17
+#define HOST_RX     36
+#define HOST_TX     17
 static const int kDePin = 16;
 #else
 #define HOST_SERIAL Serial1
@@ -54,48 +54,51 @@ DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveId
 // TTL: comment the line above and uncomment the line below.
 // DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveIds[0]);
 
-static void readAndPrint(void) {
-    uint8_t id = sensor.getClientSlaveAddr();
-    Serial.print(F("  ID "));
-    if (id < 10)
-        Serial.print(' ');
-    Serial.print(id);
-    Serial.print(F("  |  "));
-    if (sensor.readGasMeasurementData(true) != 0) {
-        Serial.println(F("read fail"));
-        return;
-    }
-    if (!sensor.lastMeasure.dataValid) {
-        Serial.println(F("  (no valid data yet)"));
-        return;
-    }
-    if (sensor.lastMeasure.timestamp[0]) {
-        Serial.print('[');
-        Serial.print(sensor.lastMeasure.timestamp);
-        Serial.print(F("]  "));
-    }
-    Serial.print(sensor.lastMeasure.gasType);
-    Serial.print(F("  "));
-    Serial.print(sensor.getConcentrationFloat(), 2);
-    Serial.print(F("  "));
-    Serial.println(sensor.lastMeasure.unit);
+static void readAndPrint(void)
+{
+  uint8_t id = sensor.getClientSlaveAddr();
+  Serial.print(F("  ID "));
+  if (id < 10)
+    Serial.print(' ');
+  Serial.print(id);
+  Serial.print(F("  |  "));
+  if (sensor.readGasMeasurementData(true) != 0) {
+    Serial.println(F("read fail"));
+    return;
+  }
+  if (!sensor.lastMeasure.dataValid) {
+    Serial.println(F("  (no valid data yet)"));
+    return;
+  }
+  if (sensor.lastMeasure.timestamp[0]) {
+    Serial.print('[');
+    Serial.print(sensor.lastMeasure.timestamp);
+    Serial.print(F("]  "));
+  }
+  Serial.print(sensor.lastMeasure.gasType);
+  Serial.print(F("  "));
+  Serial.print(sensor.getConcentrationFloat(), 2);
+  Serial.print(F("  "));
+  Serial.println(sensor.lastMeasure.unit);
 }
 
-void setup() {
-    Serial.begin(115200);
+void setup()
+{
+  Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
+  HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
-    HOST_SERIAL.begin(kBaud);
+  HOST_SERIAL.begin(kBaud);
 #endif
 }
 
-void loop() {
-    Serial.println(F("----------"));
-    for (size_t i = 0; i < kSlaveCount; i++) {
-        sensor.setClientSlaveAddr(kSlaveIds[i]);
-        readAndPrint();
-    }
-    Serial.println();
-    delay(500);
+void loop()
+{
+  Serial.println(F("----------"));
+  for (size_t i = 0; i < kSlaveCount; i++) {
+    sensor.setClientSlaveAddr(kSlaveIds[i]);
+    readAndPrint();
+  }
+  Serial.println();
+  delay(500);
 }

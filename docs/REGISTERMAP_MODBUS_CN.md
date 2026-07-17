@@ -1,6 +1,6 @@
 # SEN07xx 智能气体：Modbus RTU 寄存器表
 
-本文档按「类型 | 地址 | 名称 | 读写 | 数据/范围 | 典型值 | 说明」整理。  
+本文档按「类型 | 地址 | 名称 | 读写 | 数据/范围 | 典型值 | 说明」整理。
 **规范来源**：Arduino 库 **`DFRobot_IntelligentGasSensor` V1.0.0**（`src/DFRobot_IntelligentGasSensor.h`），与 SEN07xx 传感器 Modbus RTU 从机行为一致。
 
 > 部分通用 Modbus 表里「输入 0x0000=VID、0x0001=PID」。**本产品线为 0x0000=PID、0x0001=VID**。
@@ -58,7 +58,7 @@
 
 共 **8** 个（`0x0000`～`0x0007`）。库内宏前缀：`DFROBOT_IGS_HOLD_REG_*`。
 
-改**波特率 / 校验 / 从站号**后，向 **0x0007** 写 **0xA501**（`DFROBOT_IGS_COMMIT_KEY_SAVE_CONFIG`）**COMMIT** 方写入 EEPROM。  
+改**波特率 / 校验 / 从站号**后，向 **0x0007** 写 **0xA501**（`DFROBOT_IGS_COMMIT_KEY_SAVE_CONFIG`）**COMMIT** 方写入 EEPROM。
 **0x0005 探头休眠不入 EEPROM**，写后**立即生效**。
 
 | 类型 | 地址 | 名称 | 读写 | 典型值 | 说明 |

@@ -23,13 +23,13 @@
  */
 #include <DFRobot_IntelligentGasSensor.h>
 
-static const unsigned long kBaud = 9600;
-static const uint8_t         kSlave = 1;
+static const unsigned long kBaud  = 9600;
+static const uint8_t       kSlave = 1;
 
 #if defined(ARDUINO_ARCH_ESP32)
 #define HOST_SERIAL Serial2
-#define HOST_RX 36
-#define HOST_TX 17
+#define HOST_RX     36
+#define HOST_TX     17
 static const int kDePin = 16;
 #else
 #define HOST_SERIAL Serial1
@@ -38,37 +38,39 @@ static const int kDePin = 29;
 
 DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlave, /*dePin =*/kDePin);
 
-void setup() {
-    Serial.begin(115200);
+void setup()
+{
+  Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
+  HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
-    HOST_SERIAL.begin(kBaud);
+  HOST_SERIAL.begin(kBaud);
 #endif
 }
 
-void loop() {
-    const uint8_t err = sensor.readGasMeasurementData(true);
-    if (err != 0) {
-        Serial.print(F("read error, code="));
-        Serial.println(err);
-        delay(1000);
-        return;
-    }
-    if (!sensor.lastMeasure.dataValid) {
-        Serial.println(F("waiting for valid measurement..."));
-        delay(1000);
-        return;
-    }
-    if (sensor.lastMeasure.timestamp[0]) {
-        Serial.print('[');
-        Serial.print(sensor.lastMeasure.timestamp);
-        Serial.print(F("] "));
-    }
-    Serial.print(sensor.lastMeasure.gasType);
-    Serial.print(' ');
-    Serial.print(sensor.getConcentrationFloat(), 2);
-    Serial.print(' ');
-    Serial.println(sensor.lastMeasure.unit);
+void loop()
+{
+  const uint8_t err = sensor.readGasMeasurementData(true);
+  if (err != 0) {
+    Serial.print(F("read error, code="));
+    Serial.println(err);
     delay(1000);
+    return;
+  }
+  if (!sensor.lastMeasure.dataValid) {
+    Serial.println(F("waiting for valid measurement..."));
+    delay(1000);
+    return;
+  }
+  if (sensor.lastMeasure.timestamp[0]) {
+    Serial.print('[');
+    Serial.print(sensor.lastMeasure.timestamp);
+    Serial.print(F("] "));
+  }
+  Serial.print(sensor.lastMeasure.gasType);
+  Serial.print(' ');
+  Serial.print(sensor.getConcentrationFloat(), 2);
+  Serial.print(' ');
+  Serial.println(sensor.lastMeasure.unit);
+  delay(1000);
 }

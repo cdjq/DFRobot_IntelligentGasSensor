@@ -37,8 +37,8 @@ static const unsigned long kBaud = 9600;
 
 #if defined(ARDUINO_ARCH_ESP32)
 #define HOST_SERIAL Serial2
-#define HOST_RX 36
-#define HOST_TX 17
+#define HOST_RX     36
+#define HOST_TX     17
 static const int kDePin = 16;
 #else
 #define HOST_SERIAL Serial1
@@ -55,46 +55,49 @@ DFRobot_IntelligentGasSensor gas3(/*s =*/&HOST_SERIAL, /*slaveAddr =*/3, /*dePin
 // DFRobot_IntelligentGasSensor gas2(/*s =*/&HOST_SERIAL, /*slaveAddr =*/5);
 // DFRobot_IntelligentGasSensor gas3(/*s =*/&HOST_SERIAL, /*slaveAddr =*/3);
 
-static void printOne(DFRobot_IntelligentGasSensor &g) {
-    Serial.print(F("  ID "));
-    if (g.getClientSlaveAddr() < 10)
-        Serial.print(' ');
-    Serial.print(g.getClientSlaveAddr());
-    Serial.print(F("  |  "));
-    if (g.readGasMeasurementData(true) != 0) {
-        Serial.println(F("read fail"));
-        return;
-    }
-    if (!g.lastMeasure.dataValid) {
-        Serial.println(F("  (no valid data yet)"));
-        return;
-    }
-    if (g.lastMeasure.timestamp[0]) {
-        Serial.print('[');
-        Serial.print(g.lastMeasure.timestamp);
-        Serial.print(F("]  "));
-    }
-    Serial.print(g.lastMeasure.gasType);
-    Serial.print(F("  "));
-    Serial.print(g.getConcentrationFloat(), 2);
-    Serial.print(F("  "));
-    Serial.println(g.lastMeasure.unit);
+static void printOne(DFRobot_IntelligentGasSensor &g)
+{
+  Serial.print(F("  ID "));
+  if (g.getClientSlaveAddr() < 10)
+    Serial.print(' ');
+  Serial.print(g.getClientSlaveAddr());
+  Serial.print(F("  |  "));
+  if (g.readGasMeasurementData(true) != 0) {
+    Serial.println(F("read fail"));
+    return;
+  }
+  if (!g.lastMeasure.dataValid) {
+    Serial.println(F("  (no valid data yet)"));
+    return;
+  }
+  if (g.lastMeasure.timestamp[0]) {
+    Serial.print('[');
+    Serial.print(g.lastMeasure.timestamp);
+    Serial.print(F("]  "));
+  }
+  Serial.print(g.lastMeasure.gasType);
+  Serial.print(F("  "));
+  Serial.print(g.getConcentrationFloat(), 2);
+  Serial.print(F("  "));
+  Serial.println(g.lastMeasure.unit);
 }
 
-void setup() {
-    Serial.begin(115200);
+void setup()
+{
+  Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
-    HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
+  HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
-    HOST_SERIAL.begin(kBaud);
+  HOST_SERIAL.begin(kBaud);
 #endif
 }
 
-void loop() {
-    Serial.println(F("----------"));
-    printOne(gas1);
-    printOne(gas2);
-    printOne(gas3);
-    Serial.println();
-    delay(500);
+void loop()
+{
+  Serial.println(F("----------"));
+  printOne(gas1);
+  printOne(gas2);
+  printOne(gas3);
+  Serial.println();
+  delay(500);
 }
