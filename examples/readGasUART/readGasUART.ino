@@ -6,7 +6,7 @@
  * @n connected table (ESP32 TTL UART)
  * -----------------------------------------------------------------------
  * sensor pin |    ESP32     |
- *     VCC    |    3.3V      |
+ *     VCC    |    5V      |
  *     GND    |    GND       |
  *     RX     | GPIO17(TX2) |
  *     TX     | GPIO36(RX2) |

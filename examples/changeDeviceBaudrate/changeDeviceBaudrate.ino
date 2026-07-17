@@ -5,7 +5,7 @@
  * @n Correct order: writeDeviceBaudCode -> immediately call HOST_SERIAL.begin(new baud) -> commitConfiguration().
  * @n A successful COMMIT means the active line speed and EEPROM setting now match. The loop then keeps polling at 19200.
  * @n Before uploading, confirm that kSlaveAddr and the sensor's current baud rate match kInitialBaud.
- * @n note: The sensor exposes only RS-485 A/B terminals. Connect ESP32 TX/RX/DE to a UART-to-RS485 module, then connect the module A/B pins to the sensor.
+ * @n note: The sensor supports RS-485 through an adapter or direct TTL UART wiring. Use 5 V for sensor VCC when wiring directly.
  * @n connected table (ESP32 + UART-to-RS485 module + sensor A/B)
  * ---------------------------------------------------------------------------------------------------------------
  * ESP32 pin | UART-to-RS485 module | Sensor (SEN07xx) |
@@ -17,6 +17,14 @@
  *     --    |           A          |        A         |
  *     --    |           B          |        B         |
  * ---------------------------------------------------------------------------------------------------------------
+ * @n connected table (ESP32 direct TTL UART + sensor)
+ * ---------------------------------------------------
+ * ESP32 pin | Sensor (SEN07xx) |
+ *    5V     |       VCC        |
+ *    GND    |       GND        |
+ * GPIO17(TX)|        RX        |
+ * GPIO36(RX)|        TX        |
+ * ---------------------------------------------------
  *
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
  * @licence     The MIT License (MIT)
@@ -45,7 +53,10 @@ static const int kDePin = 16;
 static const int kDePin = 29;
 #endif
 
+// RS-485 by default.
 DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveAddr, /*dePin =*/kDePin);
+
+// TTL: comment the line above and uncomment the line below.
 // TTL: DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kSlaveAddr);
 
 static void hostSerialBegin(unsigned long baud) {
@@ -97,6 +108,7 @@ static void printOneLine(const char *tag) {
 
 void setup() {
     Serial.begin(115200);
+    delay(2000);
     hostSerialBegin(kInitialBaud);
 
     Serial.print(F("Modbus link at "));

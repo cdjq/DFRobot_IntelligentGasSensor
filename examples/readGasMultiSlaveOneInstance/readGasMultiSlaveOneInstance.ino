@@ -3,7 +3,7 @@
  * @brief Poll multiple Modbus slaves on one bus with one library object by switching the target slave address.
  * @n Unlike readGasMultiSlave, this example uses one object and calls setClientSlaveAddr() each cycle.
  * @n Switch between TTL and RS-485 the same way as readGasMultiSlave. Default slave list is 1, 5, and 3.
- * @n note: The sensor exposes only RS-485 A/B terminals. Connect ESP32 TX/RX/DE to a UART-to-RS485 module, then connect the module A/B pins to the sensor.
+ * @n note: The sensor supports RS-485 through an adapter or direct TTL UART wiring. Use 5 V for sensor VCC when wiring directly.
  * @n connected table (ESP32 + UART-to-RS485 module + sensor A/B)
  * ---------------------------------------------------------------------------------------------------------------
  * ESP32 pin | UART-to-RS485 module | Sensor (SEN07xx) |
@@ -15,6 +15,14 @@
  *     --    |           A          |        A         |
  *     --    |           B          |        B         |
  * ---------------------------------------------------------------------------------------------------------------
+ * @n connected table (ESP32 direct TTL UART + sensor)
+ * ---------------------------------------------------
+ * ESP32 pin | Sensor (SEN07xx) |
+ *    5V     |       VCC        |
+ *    GND    |       GND        |
+ * GPIO17(TX)|        RX        |
+ * GPIO36(RX)|        TX        |
+ * ---------------------------------------------------
  *
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
  * @licence     The MIT License (MIT)

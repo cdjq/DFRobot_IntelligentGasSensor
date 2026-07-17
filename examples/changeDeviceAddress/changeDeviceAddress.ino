@@ -3,7 +3,7 @@
  * @brief Change the sensor Modbus slave address with setDeviceAddress() and verify it by reading data.
  * @n Set kCurrentSlaveAddr and kNewSlaveAddr before uploading. Valid slave addresses are 1 to 247.
  * @n After a successful change, the sensor responds only at the new address until it is changed again.
- * @n note: The sensor exposes only RS-485 A/B terminals. Connect ESP32 TX/RX/DE to a UART-to-RS485 module, then connect the module A/B pins to the sensor.
+ * @n note: The sensor supports RS-485 through an adapter or direct TTL UART wiring. Use 5 V for sensor VCC when wiring directly.
  * @n connected table (ESP32 + UART-to-RS485 module + sensor A/B)
  * ---------------------------------------------------------------------------------------------------------------
  * ESP32 pin | UART-to-RS485 module | Sensor (SEN07xx) |
@@ -15,6 +15,14 @@
  *     --    |           A          |        A         |
  *     --    |           B          |        B         |
  * ---------------------------------------------------------------------------------------------------------------
+ * @n connected table (ESP32 direct TTL UART + sensor)
+ * ---------------------------------------------------
+ * ESP32 pin | Sensor (SEN07xx) |
+ *    5V     |       VCC        |
+ *    GND    |       GND        |
+ * GPIO17(TX)|        RX        |
+ * GPIO36(RX)|        TX        |
+ * ---------------------------------------------------
  *
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
  * @licence     The MIT License (MIT)
@@ -27,8 +35,8 @@
 
 static const unsigned long kBaud = 9600;
 
-static const uint8_t kCurrentSlaveAddr = 1;
-static const uint8_t kNewSlaveAddr     = 5;
+static const uint8_t kCurrentSlaveAddr = 5;
+static const uint8_t kNewSlaveAddr     = 1;
 
 #if defined(ARDUINO_ARCH_ESP32)
 #define HOST_SERIAL Serial2
@@ -46,8 +54,9 @@ DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kCurrent
 // DFRobot_IntelligentGasSensor sensor(/*s =*/&HOST_SERIAL, /*slaveAddr =*/kCurrentSlaveAddr);
 
 void setup() {
+    
     Serial.begin(115200);
-
+    delay(2000);
 #if defined(ARDUINO_ARCH_ESP32)
     HOST_SERIAL.begin(kBaud, SERIAL_8N1, /*rx =*/HOST_RX, /*tx =*/HOST_TX);
 #else
@@ -101,6 +110,7 @@ void setup() {
     }
 
     Serial.println(F("Loop will keep printing readings on the NEW address."));
+
 }
 
 void loop() {

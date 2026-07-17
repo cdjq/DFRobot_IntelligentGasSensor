@@ -36,7 +36,7 @@ See `examples/` for `readGasRS485`, `readGasUART`, `changeDeviceAddress`, `chang
 
 ## Connected
 
-Hardware conneted table (ESP32 example; sensor exposes **RS-485 A/B** only — TX/RX/DE go to a **UART-to-RS-485** adapter, not the sensor)<br>
+Hardware conneted table (ESP32 example; the module supports either **RS-485 A/B** through a UART-to-RS-485 adapter or direct TTL UART wiring to the sensor. Use **5 V** for direct sensor wiring.)<br>
 
 | ESP32 pin | UART-to-RS-485 module |
 |-----------|----------------------|
@@ -51,7 +51,14 @@ Hardware conneted table (ESP32 example; sensor exposes **RS-485 A/B** only — T
 | A | A |
 | B | B |
 
-Note: On-board **HOST UART is 3.3 V**. Do not connect TTL UART directly to **5 V** MCU (UNO/Mega). Use RS-485 for 5 V hosts. TTL direct wiring (no DE): see `readGasUART` (3.3 V ESP32 only).
+ ESP32 pin| Sensor (SEN07xx) |
+|------------|-------------------|
+| 5.0V | VCC |
+| GND | GND |
+| GPIO17 (TX) | RX |
+| GPIO36 (RX) | TX |
+
+Note: Direct TTL wiring (no DE) is supported, but the sensor VCC must be connected to **5 V**. See `readGasUART`.
 
 ## Installation
 
@@ -76,6 +83,10 @@ Typical banner after boot:
   help                          show this help
   status                        print sensor + RTC + Modbus summary
   settime YYYY-MM-DD HH:MM:SS   set RTC time
+  setinterval <1-60>            CSV every N minutes (saved)
+  logger on|off                 enable/disable CSV recorder (saved, default off)
+  repairfs                      read-write USB disk for PC filesystem repair
+                                (power cycle -> read-only default; stops logging)
   sensor sleep                  SMX100 probe SLEEP
   sensor wake                   SMX100 probe RUN
   modbus                        show host UART / slave settings
@@ -92,6 +103,9 @@ Typical banner after boot:
 | `help` | Print command list |
 | `status` | Gas reading validity, probe RUN/SLEEP, RTC, Modbus slave ID and UART settings |
 | `settime YYYY-MM-DD HH:MM:SS` | Set RTC (e.g. `settime 2026-05-21 11:15:00`) |
+| `setinterval <1-60>` | Set CSV logging interval (minutes) |
+| `logger on\off` | Enable/disable CSV recorder (saved) |
+| `repairfs` | Read-write USB disk for PC filesystem repair (power cycle -> read-only default; stops logging) |
 | `sensor sleep` | SMX100 probe **SLEEP** (immediate) |
 | `sensor wake` | SMX100 probe **RUN** (immediate) |
 | `modbus` | Show Modbus slave address, host UART baud rate and frame format |
@@ -272,11 +286,11 @@ uint8_t commitConfiguration(void);
 
 ## Compatibility
 
-MCU                | RS-485 (via adapter) | TTL UART (3.3 V only) |
+MCU                | RS-485 (via adapter) | TTL UART (5V) |
 ------------------ | :------------------: | :-------------------: |
 ESP32              |          √           |           √           |
-Mega2560 (5 V)     |          √           |           X           |
-Leonardo           |          √           |           X           |
+Mega2560 (5 V)     |          √           |           √           |
+Leonardo           |          √           |           √           |
 micro:bit          |          X           |           X           |
 
 Requires **[DFRobot_RTU](https://github.com/DFRobot/DFRobot_RTU)** and a hardware UART (`Serial1` / `Serial2`).
