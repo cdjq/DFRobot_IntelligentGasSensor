@@ -1,5 +1,7 @@
 # SEN07xx 智能气体：Modbus RTU 寄存器表
 
+* [English Version](./REGISTERMAP_MODBUS.md)
+
 本文档按「类型 | 地址 | 名称 | 读写 | 数据/范围 | 典型值 | 说明」整理。
 **规范来源**：Arduino 库 **`DFRobot_IntelligentGasSensor` V1.0.0**（`src/DFRobot_IntelligentGasSensor.h`），与 SEN07xx 传感器 Modbus RTU 从机行为一致。
 

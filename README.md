@@ -32,7 +32,7 @@ SKU: SEN0738 / SEN0739 / SEN0740 / SEN0741
 
 This library drives SEN07xx gas sensors as Modbus RTU slaves. It extends **DFRobot_RTU** for framing/CRC and parses sensor input registers into `lastMeasure`. Default link: **9600 8N1**, slave address **1**.<br>
 
-See `examples/` for `readGasRS485`, `readGasUART`, `changeDeviceAddress`, `changeDeviceBaudrate`, etc. Register map: [REGISTERMAP_MODBUS_CN.md](./docs/REGISTERMAP_MODBUS_CN.md).
+See `examples/` for `readGasRS485`, `readGasUART`, `changeDeviceAddress`, `changeDeviceBaudrate`, etc. Register map: [REGISTERMAP_MODBUS.md](./docs/REGISTERMAP_MODBUS.md).
 
 ## Connected
 
