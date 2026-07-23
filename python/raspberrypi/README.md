@@ -61,17 +61,7 @@ Download the library to the Raspberry Pi and install `pyserial`. The required `D
 included in this directory.
 
 ```bash
-sudo apt update
-sudo apt install -y python3-serial
 git clone https://github.com/DFRobot/DFRobot_IntelligentGasSensor.git
-```
-
-Before using the Raspberry Pi UART, run `sudo raspi-config`, disable the serial login shell, enable
-the serial hardware, and reboot. If access to the serial port is denied, add the current user to the
-`dialout` group:
-
-```bash
-sudo usermod -aG dialout $USER
 ```
 
 Open the example directory and run an example. To run the UART measurement example:
